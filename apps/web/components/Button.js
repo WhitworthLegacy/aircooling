@@ -28,9 +28,9 @@ export default function Button({
 
   // Variant styles - HIGH CONTRAST
   const variants = {
-    primary: 'bg-vdAccent hover:brightness-95 text-white shadow-vd-sm hover:shadow-vd-md focus:ring-vdAccent',
-    secondary: 'bg-vdPrimary border-2 border-vdPrimary text-white hover:bg-transparent hover:text-vdPrimary focus:ring-vdPrimary',
-    ghost: 'bg-transparent text-vdDark hover:bg-vdSurface focus:ring-vdPrimary',
+    primary: 'bg-airAccent hover:brightness-95 text-white shadow-sm hover:shadow-md focus:ring-airAccent',
+    secondary: 'bg-airPrimary border-2 border-airPrimary text-white hover:bg-transparent hover:text-airPrimary focus:ring-airPrimary',
+    ghost: 'bg-transparent text-airDark hover:bg-airSurface focus:ring-airPrimary',
   };
 
   // Size styles - SLIMMER (reduced py) + WIDER (increased px)

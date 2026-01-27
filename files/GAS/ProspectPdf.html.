@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <style>
+    @page { size: A4; margin: 18mm; }
+    body{ font-family: Arial, sans-serif; font-size:12px; color:#111; }
+    .header{ border-bottom:2px solid #0077c8; padding-bottom:8px; margin-bottom:12px; }
+    h1{ margin:0; font-size:18px; }
+    .meta{ margin-top:6px; color:#444; }
+    .grid{ width:100%; border-collapse:collapse; margin-top:10px; }
+    .grid td{ padding:6px; vertical-align:top; border:1px solid #ddd; }
+    .label{ font-weight:bold; color:#333; margin-bottom:2px; display:block; }
+    .section{ margin-top:14px; }
+    .section-title{ font-weight:bold; border-bottom:1px solid #ccc; padding-bottom:4px; margin-bottom:6px; }
+    .planWrap{ border:1px solid #ddd; padding:8px; border-radius:6px; }
+    .planWrap img{ width:100%; max-height:460px; object-fit:contain; display:block; }
+    .small{ font-size:10px; color:#666; margin-top:10px; text-align:center; }
+  </style>
+</head>
+
+<body>
+  <? var x = p || {}; ?>
+
+  <div class="header">
+    <h1>Fiche Prospect – AirCooling</h1>
+    <div class="meta">
+      Prospect ID : <b><?= prospectId ?></b><br>
+      Date encodage : <?= createdAt ?><br>
+      Dernière mise à jour : <?= updatedAt ?>
+    </div>
+  </div>
+
+  <table class="grid">
+    <tr>
+      <td>
+        <span class="label">Date_Prospect</span>
+        <?= x.Date_Prospect || '' ?>
+      </td>
+      <td>
+        <span class="label">Type_Client</span>
+        <?= x.Type_Client || '' ?>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <span class="label">Nom</span>
+        <?= x.Nom || '' ?>
+      </td>
+      <td>
+        <span class="label">Téléphone</span>
+        <?= x.Telephone || '' ?>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <span class="label">Email</span>
+        <?= x.Email || '' ?>
+      </td>
+      <td>
+        <span class="label">Source</span>
+        <?= x.Source || '' ?>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="2">
+        <span class="label">Adresse</span>
+        <?= x.Adresse || '' ?>, <?= x.Localite || '' ?> <?= x.Code_Postal || '' ?>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <span class="label">Type_Demande</span>
+        <?= x.Type_Demande || '' ?>
+      </td>
+      <td>
+        <span class="label">Statut</span>
+        <?= x.Statut || '' ?>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <span class="label">Marque souhaitée</span>
+        <?= x.Marque_Souhaitee || '' ?>
+      </td>
+      <td>
+        <span class="label">Nombre unités</span>
+        <?= x.Nombre_Unites || '' ?>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <span class="label">Visite technique (date/heure)</span>
+        <?= x.Visite_Technique_Date || '' ?> <?= x.Visite_Technique_Heure || '' ?>
+      </td>
+      <td>
+        <span class="label">Technicien assigné</span>
+        <?= x.Technicien_Assigne || '' ?>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <span class="label">Devis estimatif (€)</span>
+        <?= x.Devis_Montant_Estimatif || '' ?>
+      </td>
+      <td>
+        <span class="label">Devis final (€)</span>
+        <?= x.Devis_Montant_Final || '' ?>
+      </td>
+    </tr>
+  </table>
+
+  <div class="section">
+    <div class="section-title">Description de la demande</div>
+    <div><?= x.Description_Demande_html || '' ?></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Notes internes</div>
+    <div><?= x.Notes_Interne_html || '' ?></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Croquis / Plan</div>
+    <div class="planWrap">
+      <? if (planDataUrl) { ?>
+        <img src="<?!= planDataUrl ?>" alt="Plan prospect">
+      <? } else { ?>
+        <div>Aucun croquis fourni.</div>
+      <? } ?>
+    </div>
+  </div>
+
+  <div class="small">
+    AirCooling — Rue de Belgrade 75 – 1190 Forest — info@aircooling.be
+  </div>
+</body>
+</html>

@@ -12,7 +12,7 @@ import {
   Trash2,
   Loader2,
 } from 'lucide-react';
-import { PageContainer, Topbar } from '@/components/layout';
+import { PageContainer } from '@/components/layout';
 import { Badge, Button, Card, Input, Modal, Select } from '@/components/ui';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
 
@@ -135,17 +135,16 @@ export default function InventoryPage() {
 
   return (
     <>
-      <Topbar title="Stock" />
       <PageContainer>
         <div className="space-y-6">
           {/* Header */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-vdDark flex items-center gap-2">
+              <h1 className="text-2xl font-bold text-airDark flex items-center gap-2">
                 <Package className="w-6 h-6" />
                 Gestion du Stock
               </h1>
-              <p className="text-sm text-vdMuted mt-1">
+              <p className="text-sm text-airMuted mt-1">
                 {items.length} articles • {lowStockItems.length} en alerte
               </p>
             </div>
@@ -160,7 +159,7 @@ export default function InventoryPage() {
 
           {/* Search */}
           <Input
-            icon={<Search className="w-4 h-4 text-vdMuted" />}
+            icon={<Search className="w-4 h-4 text-airMuted" />}
             placeholder="Chercher pièce, référence..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -203,7 +202,7 @@ export default function InventoryPage() {
           {/* Loading */}
           {loading && (
             <div className="flex items-center justify-center py-16">
-              <Loader2 className="w-8 h-8 animate-spin text-vdPrimary" />
+              <Loader2 className="w-8 h-8 animate-spin text-airPrimary" />
             </div>
           )}
 
@@ -214,13 +213,13 @@ export default function InventoryPage() {
                 <Card
                   key={item.id}
                   onClick={() => openItemModal(item)}
-                  className={`cursor-pointer hover:shadow-vd-md transition-shadow border-l-4 ${
+                  className={`cursor-pointer hover:shadow-md transition-shadow border-l-4 ${
                     item.quantity <= item.min_threshold
                       ? 'border-l-red-500'
                       : 'border-l-green-500'
                   }`}
                 >
-                  <div className="w-full aspect-square bg-vdSurface rounded-xl mb-3 flex items-center justify-center overflow-hidden">
+                  <div className="w-full aspect-square bg-airSurface rounded-xl mb-3 flex items-center justify-center overflow-hidden">
                     {getCoverImage(item) ? (
                       <img
                         src={getCoverImage(item)!}
@@ -228,18 +227,18 @@ export default function InventoryPage() {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <Package className="w-12 h-12 text-vdBorder" />
+                      <Package className="w-12 h-12 text-airBorder" />
                     )}
                   </div>
-                  <h3 className="font-semibold text-vdDark truncate">{item.name}</h3>
-                  <p className="text-xs text-vdMuted mt-1">
+                  <h3 className="font-semibold text-airDark truncate">{item.name}</h3>
+                  <p className="text-xs text-airMuted mt-1">
                     Ref: {item.reference || 'N/A'}
                   </p>
                   <div className="flex items-baseline justify-between mt-3">
-                    <span className="text-lg font-bold text-vdDark">
+                    <span className="text-lg font-bold text-airDark">
                       {formatPrice(item.price_sell)}
                     </span>
-                    <span className="text-xs text-vdMuted">
+                    <span className="text-xs text-airMuted">
                       Achat: {formatPrice(item.price_buy)}
                     </span>
                   </div>
@@ -255,7 +254,7 @@ export default function InventoryPage() {
                 </Card>
               ))}
               {filteredItems.length === 0 && !loading && (
-                <div className="col-span-full text-center py-12 text-vdMuted">
+                <div className="col-span-full text-center py-12 text-airMuted">
                   Aucun article trouvé
                 </div>
               )}
@@ -517,15 +516,15 @@ function InventoryItemForm({
       <div className="grid md:grid-cols-[200px_1fr] gap-6">
         {/* Image */}
         <div>
-          <div className="w-full aspect-square bg-vdSurface rounded-2xl flex items-center justify-center overflow-hidden">
+          <div className="w-full aspect-square bg-airSurface rounded-2xl flex items-center justify-center overflow-hidden">
             {coverImage ? (
               <img src={coverImage} alt={item?.name} className="w-full h-full object-cover" />
             ) : (
-              <Package className="w-16 h-16 text-vdBorder" />
+              <Package className="w-16 h-16 text-airBorder" />
             )}
           </div>
           {item?.products?.[0]?.slug && (
-            <p className="text-xs text-vdMuted mt-2 text-center">
+            <p className="text-xs text-airMuted mt-2 text-center">
               Slug: {item.products[0].slug}
             </p>
           )}
@@ -534,11 +533,11 @@ function InventoryItemForm({
         {/* Form */}
         <div className="space-y-4">
           <div>
-            <h3 className="text-xl font-bold text-vdDark">
+            <h3 className="text-xl font-bold text-airDark">
               {item?.name || formData.name || 'Nouvelle pièce'}
             </h3>
             {(item?.reference || formData.reference) && (
-              <p className="text-sm text-vdMuted">
+              <p className="text-sm text-airMuted">
                 Ref: {item?.reference || formData.reference} • Fourn:{' '}
                 {item?.supplier_name || formData.supplier_name || '—'}
               </p>
@@ -573,7 +572,7 @@ function InventoryItemForm({
                     name="supplier_name"
                     value={formData.supplier_name}
                     onChange={handleChange}
-                    placeholder="VeloDoctor"
+                    placeholder="Aircooling"
                   />
                 </div>
               </>
@@ -631,7 +630,7 @@ function InventoryItemForm({
                   Supprimer
                 </Button>
               )}
-              <span className="text-sm text-vdMuted">
+              <span className="text-sm text-airMuted">
                 Achat: {formatPrice(formData.price_buy)} • Vente:{' '}
                 {formatPrice(formData.price_sell)}
               </span>
@@ -642,8 +641,8 @@ function InventoryItemForm({
 
       {/* Stock Movement */}
       {!isNew && (
-        <div className="border-t border-vdBorder pt-6">
-          <h4 className="font-semibold text-vdDark mb-4">Mouvement de stock</h4>
+        <div className="border-t border-airBorder pt-6">
+          <h4 className="font-semibold text-airDark mb-4">Mouvement de stock</h4>
 
           {movementError && (
             <div className="p-3 rounded-xl bg-red-50 text-red-700 text-sm mb-4">
@@ -658,7 +657,7 @@ function InventoryItemForm({
               className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm transition ${
                 movementType === 'OUT'
                   ? 'bg-amber-100 text-amber-800'
-                  : 'bg-vdSurface text-vdMuted hover:bg-vdSurface/80'
+                  : 'bg-airSurface text-airMuted hover:bg-airSurface/80'
               }`}
             >
               <ArrowDown className="w-4 h-4" />
@@ -670,13 +669,13 @@ function InventoryItemForm({
               className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm transition ${
                 movementType === 'IN'
                   ? 'bg-green-100 text-green-800'
-                  : 'bg-vdSurface text-vdMuted hover:bg-vdSurface/80'
+                  : 'bg-airSurface text-airMuted hover:bg-airSurface/80'
               }`}
             >
               <ArrowUp className="w-4 h-4" />
               Entrée
             </button>
-            <span className="text-sm text-vdMuted ml-auto">
+            <span className="text-sm text-airMuted ml-auto">
               Stock actuel: <strong>{currentQty}</strong>
             </span>
           </div>
@@ -691,9 +690,9 @@ function InventoryItemForm({
             />
 
             {movementType === 'OUT' && (
-              <div className="bg-vdSurface/50 p-4 rounded-xl space-y-4">
+              <div className="bg-airSurface/50 p-4 rounded-xl space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-vdPrimary mb-2">
+                  <label className="block text-xs font-semibold text-airPrimary mb-2">
                     Client
                   </label>
                   <input
@@ -701,7 +700,7 @@ function InventoryItemForm({
                     placeholder="Rechercher ou taper nom..."
                     value={selectedClient}
                     onChange={(e) => setSelectedClient(e.target.value)}
-                    className="w-full rounded-xl border border-vdBorder px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdPrimary focus:border-transparent"
+                    className="w-full rounded-xl border border-airBorder px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-airPrimary focus:border-transparent"
                     list="clients-list"
                   />
                   <datalist id="clients-list">

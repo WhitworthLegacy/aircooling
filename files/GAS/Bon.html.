@@ -1,0 +1,898 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bon d'intervention – AirCooling</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+
+  <style>
+    :root{
+      --primary:#0077c8;
+      --primary-soft:#e6f2fb;
+      --border:#dcdcdc;
+      --bg:#f5f5f7;
+      --text:#0f172a;
+      --muted:#64748b;
+      --radius:16px;
+
+      /* mobile spacing */
+      --pad:16px;
+      --cardPad:16px;
+      --shadow: 0 14px 40px rgba(2,6,23,.10);
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      font-family:system-ui,-apple-system,Segoe UI,sans-serif;
+      margin:0;
+      padding:var(--pad);
+      background:var(--bg);
+      color:var(--text);
+      -webkit-font-smoothing:antialiased;
+      text-rendering:optimizeLegibility;
+    }
+
+    /* better tap behavior */
+    input,select,textarea,button{font:inherit}
+    button{touch-action:manipulation}
+
+    /* Center + “zoom feeling” */
+    .wrapper{
+      max-width:820px;
+      margin:0 auto;
+      padding-bottom:120px; /* space for bottom nav */
+    }
+
+    .card{
+      background:#fff;
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+      border:1px solid rgba(15,23,42,.06);
+    }
+
+    header.company{
+      padding:18px var(--cardPad) 14px;
+      border-bottom:1px solid #e5e7eb;
+      text-align:center;
+    }
+
+    .brand{
+      font-size:22px;
+      font-weight:900;
+      color:var(--primary);
+      margin:0 0 6px;
+      letter-spacing:.2px;
+    }
+
+    .small{
+      font-size:13px;
+      color:#475569;
+      line-height:1.45;
+    }
+
+    .pill{
+      display:inline-block;
+      margin-top:12px;
+      padding:7px 12px;
+      font-size:11px;
+      font-weight:900;
+      border-radius:999px;
+      background:var(--primary-soft);
+      color:var(--primary);
+      text-transform:uppercase;
+      letter-spacing:.06em;
+    }
+
+    /* Wizard bar (sticky) */
+    .wizardBar{
+      position:sticky;
+      top:0;
+      z-index:30;
+      background:rgba(255,255,255,.92);
+      backdrop-filter: blur(10px);
+      border-bottom:1px solid #e5e7eb;
+      padding:12px 12px;
+      display:flex;
+      gap:12px;
+      align-items:center;
+    }
+
+    .wizardBar .left{flex:1;min-width:0}
+    .wizardTitle{margin:0;font-size:15px;font-weight:1000}
+    .wizardMeta{font-size:12px;color:var(--muted);margin-top:3px}
+
+    .wizardProgress{
+      height:10px;
+      background:#e5e7eb;
+      border-radius:999px;
+      overflow:hidden;
+      margin-top:8px;
+    }
+    .wizardProgress > div{height:100%;width:0%;background:var(--primary)}
+
+    .startBtn{
+      border:0;
+      border-radius:999px;
+      padding:12px 14px;
+      font-weight:1000;
+      background:var(--primary);
+      color:#fff;
+      cursor:pointer;
+      white-space:nowrap;
+      box-shadow: 0 10px 22px rgba(0,119,200,.22);
+    }
+
+    /* Steps */
+    .stepsWrap{padding:16px}
+    .step{display:none}
+    .step.active{display:block}
+
+    .stepCard{
+      border:1px solid #e5e7eb;
+      border-radius:18px;
+      box-shadow:0 10px 26px rgba(2,6,23,.07);
+      padding:16px;
+      background:#fff;
+    }
+
+    .stepLabel{
+      margin:0 0 6px;
+      font-size:12px;
+      color:var(--muted);
+      font-weight:900;
+      letter-spacing:.02em;
+      text-transform:uppercase;
+    }
+
+    .stepHeading{
+      margin:0 0 14px;
+      font-size:20px;
+      font-weight:1000;
+      letter-spacing:.2px;
+    }
+
+    label{
+      display:block;
+      font-size:12px;
+      color:var(--muted);
+      margin:12px 0 7px;
+      font-weight:900;
+    }
+
+    /* Bigger fields for mobile */
+    input,select,textarea{
+      width:100%;
+      padding:16px 14px;
+      font-size:16px;
+      border:1px solid #d1d5db;
+      border-radius:14px;
+      outline:none;
+      background:#fff;
+      box-shadow: 0 1px 0 rgba(2,6,23,.02);
+      scroll-margin-top:92px; /* avoids sticky overlap */
+    }
+
+    input:focus,select:focus,textarea:focus{
+      border-color: rgba(0,119,200,.65);
+      box-shadow: 0 0 0 4px rgba(0,119,200,.15);
+    }
+
+    textarea{min-height:160px;resize:vertical}
+
+    .row2{display:grid;grid-template-columns:1fr;gap:12px}
+    @media(min-width:720px){
+      body{padding:22px}
+      .stepsWrap{padding:18px}
+      .row2{grid-template-columns:1fr 1fr}
+      header.company{text-align:left}
+      .brand{font-size:24px}
+    }
+
+    /* Chips */
+    .chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
+    .chip{
+      flex:1;
+      min-width:160px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:14px 14px;
+      border:1px solid #d1d5db;
+      border-radius:16px;
+      background:#fafafa;
+      font-weight:900;
+      cursor:pointer;
+      user-select:none;
+    }
+    .chip input{width:auto;margin:0}
+
+    .amountGrid{display:grid;grid-template-columns:1fr;gap:12px}
+    @media(min-width:720px){.amountGrid{grid-template-columns:repeat(3,1fr)}}
+    .amountGrid .full{grid-column:1 / -1}
+
+    /* Signatures bigger on mobile */
+    .sigGrid{display:grid;grid-template-columns:1fr;gap:14px}
+    @media(min-width:720px){.sigGrid{grid-template-columns:1fr 1fr}}
+
+    .sigBox{
+      border:1px solid #e5e7eb;
+      border-radius:18px;
+      padding:12px;
+      background:#fafafa;
+    }
+
+    .sigTop{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:10px
+    }
+
+    .sigTop .t{font-size:12px;font-weight:1000;color:#0f172a;text-transform:uppercase;letter-spacing:.04em}
+    .clearSig{font-size:12px;font-weight:1000;color:#b91c1c;cursor:pointer;text-decoration:underline}
+
+    .sigArea{
+      width:100%;
+      height:210px; /* ⬅ bigger */
+      border:2px dashed #cbd5e1;
+      border-radius:16px;
+      background:#fff;
+      overflow:hidden;
+      touch-action:none;
+    }
+    canvas{width:100%;height:100%;display:block}
+
+    .checkLine{
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
+      margin-top:14px;
+      font-size:14px;
+      color:#475569;
+    }
+    .checkLine input{width:auto;margin-top:5px;transform:scale(1.15)}
+
+    .hint{
+      margin-top:10px;
+      font-size:12px;
+      color:#ef4444;
+      font-weight:1000;
+      display:none;
+    }
+    .hint.show{display:block}
+
+
+    /* ===== NAV (INLINE, under fields) ===== */
+.wrapper{ padding-bottom: 0 !important; }  /* plus besoin de place pour une barre fixe */
+
+.wizardNav{
+  position: static !important;
+  left:auto !important; right:auto !important; bottom:auto !important;
+  z-index:auto !important;
+
+  margin-top: 14px;
+  padding: 0;
+  background: transparent;
+  backdrop-filter: none;
+  border-top: 0;
+  display: none; /* affiché seulement quand wizardOn */
+}
+
+.wizardNavInner{
+  max-width: 100%;
+  margin: 0;
+  display: flex;
+  gap: 12px;
+}
+
+.wizBtn{
+  flex: 1;
+  border: 0;
+  border-radius: 18px;
+  padding: 18px 16px;       /* PLUS GROS */
+  font-size: 19px;          /* PLUS GROS */
+  font-weight: 1000;
+  cursor: pointer;
+  box-shadow: 0 10px 22px rgba(2,6,23,.10);
+}
+.back{background:#e5e7eb;color:#0f172a}
+.next{background:var(--primary);color:#fff}
+
+/* ===== BIG MOBILE MODE ===== */
+@media (max-width: 520px){
+  body{ padding: 12px !important; }
+  .wizardBar{ padding: 14px 12px; }
+
+  .brand{ font-size: 28px !important; }
+  .stepHeading{ font-size: 24px !important; }
+
+  label{ font-size: 14px !important; }
+
+  input,select,textarea{
+    font-size: 19px !important;
+    padding: 18px 14px !important;
+    border-radius: 16px !important;
+  }
+
+  .chip{
+    padding: 16px !important;
+    font-size: 17px !important;
+    border-radius: 18px !important;
+  }
+
+  .sigArea{ height: 260px !important; }
+
+  .wizBtn{ font-size: 20px !important; padding: 18px 16px !important; }
+}
+
+/* ✅ Force 1 colonne dès que c’est "mobile-like" (même si Safari fait un viewport large) */
+@media (max-width: 980px){
+  .row2{ grid-template-columns: 1fr !important; }
+}
+
+/* ✅ Chips/radios : en pile sur mobile pour éviter l’écrasement */
+@media (max-width: 980px){
+  .chips{ flex-direction: column !important; }
+  .chip{
+    min-width: 100% !important;
+    width: 100% !important;
+  }
+}
+
+
+
+  </style>
+</head>
+
+<body>
+  <div class="wrapper">
+    <div class="card">
+
+      <header class="company">
+        <p class="brand">AirCooling</p>
+        <div class="small">
+          Rue de Belgrade 75 – 1190 Forest, Belgique<br>
+          GSM : 0487 17 06 10 • Tél : 02 725 33 85 • email : info@aircooling.be
+        </div>
+        <span class="pill">Bon d’intervention / commande</span>
+      </header>
+
+      <!-- Wizard top bar -->
+      <div class="wizardBar">
+        <div class="left">
+          <p class="wizardTitle">Mode technicien</p>
+          <div class="wizardMeta"><span id="wizCounter">—</span></div>
+          <div class="wizardProgress"><div id="wizProgressFill"></div></div>
+        </div>
+        <button type="button" class="startBtn" id="startBtn">Remplir champs</button>
+      </div>
+
+      <form id="bonForm" method="post" action="<?= scriptUrl ?>">
+        <input type="hidden" name="formType" value="BON">
+        <input type="hidden" name="Signature_Tech" id="Signature_Tech">
+        <input type="hidden" name="Signature_Client" id="Signature_Client">
+
+        <div class="stepsWrap">
+
+          <!-- STEP 1 -->
+          <section class="step" data-step>
+            <div class="stepCard">
+              <p class="stepLabel">Étape 1</p>
+              <h3 class="stepHeading">Bon n°</h3>
+              <label>Bon_N *</label>
+              <input type="text" name="Bon_N" required placeholder="ex: 2025-10-24">
+            </div>
+          </section>
+
+          <!-- STEP 2 -->
+          <section class="step" data-step>
+            <div class="stepCard">
+              <p class="stepLabel">Étape 2</p>
+              <h3 class="stepHeading">Client</h3>
+
+              <label>Nom du client *</label>
+              <input type="text" name="Client_Nom" required placeholder="Nom client / société">
+
+              <div class="row2">
+                <div>
+                  <label>TVA / BTW *</label>
+                  <input type="text" name="Client_TVA" required placeholder="BE... / N° TVA">
+                </div>
+                <div>
+                  <label>Email *</label>
+                  <input type="email" name="Email" required placeholder="email@...">
+                </div>
+              </div>
+
+              <label>Téléphone *</label>
+              <input type="tel" name="Telephone" required placeholder="+32 ...">
+            </div>
+          </section>
+
+          <!-- STEP 3 -->
+          <section class="step" data-step>
+            <div class="stepCard">
+              <p class="stepLabel">Étape 3</p>
+              <h3 class="stepHeading">Adresse client</h3>
+
+              <label>Adresse *</label>
+              <input type="text" name="Client_Adresse" required placeholder="Rue + numéro">
+
+              <div class="row2">
+                <div>
+                  <label>Localité *</label>
+                  <input type="text" name="Client_Localite" required placeholder="Ville">
+                </div>
+                <div>
+                  <label>Responsable client (si différent)</label>
+                  <input type="text" name="Resp_Nom" placeholder="Nom responsable">
+                </div>
+              </div>
+
+              <div class="row2">
+                <div>
+                  <label>Adresse responsable</label>
+                  <input type="text" name="Resp_Adresse" placeholder="Rue + numéro">
+                </div>
+                <div>
+                  <label>Localité responsable</label>
+                  <input type="text" name="Resp_Localite" placeholder="Ville">
+                </div>
+              </div>
+
+              <label>TVA responsable</label>
+              <input type="text" name="Resp_TVA" placeholder="N° TVA">
+            </div>
+          </section>
+
+          <!-- STEP 4 -->
+          <section class="step" data-step>
+            <div class="stepCard">
+              <p class="stepLabel">Étape 4</p>
+              <h3 class="stepHeading">Intervention</h3>
+
+              <label>Nom technicien *</label>
+              <input type="text" name="Technicien_Nom" required placeholder="Nom technicien">
+
+              <div class="row2">
+                <div>
+                  <label>Date *</label>
+                  <input type="date" name="Date_Intervention" required>
+                </div>
+                <div>
+                  <label>Type d’intervention *</label>
+                  <div class="chips">
+                    <label class="chip"><input type="radio" name="Type_Intervention" value="Entretien" required> Entretien</label>
+                    <label class="chip"><input type="radio" name="Type_Intervention" value="Depannage" required> Dépannage</label>
+                    <label class="chip"><input type="radio" name="Type_Intervention" value="Installation" required> Installation</label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row2">
+                <div>
+                  <label>Heure de début *</label>
+                  <input type="time" name="Heure_Debut" required>
+                </div>
+                <div>
+                  <label>Heure de fin *</label>
+                  <input type="time" name="Heure_Fin" required>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- STEP 5 -->
+          <section class="step" data-step>
+            <div class="stepCard">
+              <p class="stepLabel">Étape 5</p>
+              <h3 class="stepHeading">Travaux réalisés</h3>
+              <label>Travaux_Réalisés *</label>
+              <textarea name="Travaux_Realises" required placeholder="Décris les travaux..."></textarea>
+            </div>
+          </section>
+
+          <!-- STEP 6 -->
+          <section class="step" data-step>
+            <div class="stepCard">
+              <p class="stepLabel">Étape 6</p>
+              <h3 class="stepHeading">Fournitures</h3>
+              <label>Fournitures</label>
+              <textarea name="Fournitures" placeholder="Fournitures utilisées (si applicable)"></textarea>
+            </div>
+          </section>
+
+          <!-- STEP 7 -->
+          <section class="step" data-step>
+            <div class="stepCard">
+              <p class="stepLabel">Étape 7</p>
+              <h3 class="stepHeading">Montants</h3>
+
+              <div class="amountGrid">
+                <div class="full">
+                  <label>Total HT (€) *</label>
+                  <input id="Total_HT" type="number" step="0.01" name="Total_HT" required placeholder="0.00">
+                </div>
+
+                <div>
+                  <label>TVA (€)</label>
+                  <input id="TVA_EUR" type="number" step="0.01" name="TVA_EUR" readonly placeholder="0.00">
+                </div>
+
+                <div>
+                  <label>Total TTC (€)</label>
+                  <input id="Total_TTC" type="number" step="0.01" name="Total_TTC" readonly placeholder="0.00">
+                </div>
+
+                <div>
+                  <label>Acompte (€) *</label>
+                  <input id="Acompte" type="number" step="0.01" name="Acompte" required placeholder="0.00">
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- STEP 8 -->
+          <section class="step" data-step>
+            <div class="stepCard">
+              <p class="stepLabel">Étape 8</p>
+              <h3 class="stepHeading">Paiement</h3>
+
+              <label>Mode de paiement *</label>
+              <div class="chips">
+                <label class="chip"><input type="radio" name="Mode_Paiement" value="Cash" required> Cash</label>
+                <label class="chip"><input type="radio" name="Mode_Paiement" value="Virement" required> Virement</label>
+              </div>
+            </div>
+          </section>
+
+          <!-- STEP 9 -->
+          <section class="step" data-step>
+            <div class="stepCard">
+              <p class="stepLabel">Étape 9</p>
+              <h3 class="stepHeading">Signatures</h3>
+
+              <div class="sigGrid">
+                <div class="sigBox">
+                  <div class="sigTop">
+                    <div class="t">Technicien *</div>
+                    <div class="clearSig" id="clearTech">Effacer</div>
+                  </div>
+                  <div class="sigArea"><canvas id="techCanvas"></canvas></div>
+                </div>
+
+                <div class="sigBox">
+                  <div class="sigTop">
+                    <div class="t">Client *</div>
+                    <div class="clearSig" id="clearClient">Effacer</div>
+                  </div>
+                  <div class="sigArea"><canvas id="clientCanvas"></canvas></div>
+                </div>
+              </div>
+
+              <div class="checkLine">
+                <input type="checkbox" id="acceptCondition" required>
+                <label for="acceptCondition" style="margin:0; font-size:13px; color:#475569; font-weight:700;">
+                  En signant ce document, le client reconnaît avoir pris connaissance des travaux réalisés et accepte le montant indiqué.
+                </label>
+              </div>
+
+              <div class="hint" id="sigHint">Merci de signer les 2 zones (Technicien + Client).</div>
+            </div>
+          </section>
+
+        </div>
+
+
+        <!-- Hidden submit button (wizard triggers it) -->
+        <button type="submit" id="hiddenSubmit" style="display:none">Submit</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Bottom nav -->
+  <div class="wizardNav" id="wizardNav">
+    <div class="wizardNavInner">
+      <button type="button" class="wizBtn back" id="btnBack">◀ Retour</button>
+      <button type="button" class="wizBtn next" id="btnNext">Suivant ▶</button>
+    </div>
+  </div>
+
+  <script>
+    // ===== VAT auto-calc =====
+    const VAT_RATE = 0.21;
+
+    function toNumber(val){
+      if (val === null || val === undefined) return 0;
+      const s = String(val).replace(',', '.').trim();
+      const n = parseFloat(s);
+      return isNaN(n) ? 0 : n;
+    }
+    function round2(n){ return Math.round((n + Number.EPSILON) * 100) / 100; }
+
+    function recalcTotals(){
+      const htEl  = document.getElementById('Total_HT');
+      const tvaEl = document.getElementById('TVA_EUR');
+      const ttcEl = document.getElementById('Total_TTC');
+
+      const ht = toNumber(htEl.value);
+      if (!htEl.value){
+        tvaEl.value = '';
+        ttcEl.value = '';
+        return;
+      }
+      const tva = round2(ht * VAT_RATE);
+      const ttc = round2(ht + tva);
+
+      tvaEl.value = tva.toFixed(2);
+      ttcEl.value = ttc.toFixed(2);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const htEl = document.getElementById('Total_HT');
+      htEl.addEventListener('input', recalcTotals);
+      htEl.addEventListener('change', recalcTotals);
+      recalcTotals();
+    });
+  </script>
+
+  <script>
+  let techPad, clientPad;
+
+  function resizeCanvas(canvas) {
+    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+    const rect = canvas.getBoundingClientRect();
+    canvas.width  = Math.max(1, rect.width) * ratio;
+    canvas.height = Math.max(1, rect.height) * ratio;
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  }
+
+  function initPads() {
+    const techCanvas = document.getElementById('techCanvas');
+    const clientCanvas = document.getElementById('clientCanvas');
+    if (!techCanvas || !clientCanvas) return;
+
+    // Si le canvas est caché, rect=0 => on attend un peu
+    const r1 = techCanvas.getBoundingClientRect();
+    const r2 = clientCanvas.getBoundingClientRect();
+    if (r1.width < 10 || r1.height < 10 || r2.width < 10 || r2.height < 10) {
+      setTimeout(initPads, 120);
+      return;
+    }
+
+    resizeCanvas(techCanvas);
+    resizeCanvas(clientCanvas);
+
+    techPad   = new SignaturePad(techCanvas,   { backgroundColor: 'rgb(255,255,255)' });
+    clientPad = new SignaturePad(clientCanvas, { backgroundColor: 'rgb(255,255,255)' });
+  }
+
+  function clearPad(pad) {
+    if (pad) pad.clear();
+  }
+
+  // ✅ On ne ré-init pas en boucle au resize, on resize seulement
+  window.addEventListener('resize', () => {
+    const techCanvas = document.getElementById('techCanvas');
+    const clientCanvas = document.getElementById('clientCanvas');
+    if (!techCanvas || !clientCanvas || !techPad || !clientPad) return;
+
+    resizeCanvas(techCanvas);
+    resizeCanvas(clientCanvas);
+    techPad.clear();
+    clientPad.clear();
+  });
+
+  document.addEventListener('DOMContentLoaded', () => {
+  const form = document.getElementById('bonForm');
+  const clearTechBtn = document.getElementById('clearTech');
+  const clearClientBtn = document.getElementById('clearClient');
+
+  function ensurePads(){
+    if (!techPad || !clientPad) initPads();
+  }
+
+  // ✅ Effacer technicien
+  if (clearTechBtn){
+    clearTechBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      ensurePads();
+      if (techPad) techPad.clear();
+    }, { passive:false });
+  }
+
+  // ✅ Effacer client
+  if (clearClientBtn){
+    clearClientBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      ensurePads();
+      if (clientPad) clientPad.clear();
+    }, { passive:false });
+  }
+
+  // (optionnel) init si l’étape est déjà visible
+  // ensurePads();
+
+  form.addEventListener('submit', function(e) {
+    ensurePads();
+
+    if (!techPad || !clientPad || techPad.isEmpty() || clientPad.isEmpty()) {
+      e.preventDefault();
+      alert("Merci de signer les deux zones (Technicien et Client).");
+      return;
+    }
+
+    document.getElementById('Signature_Tech').value   = techPad.toDataURL();
+    document.getElementById('Signature_Client').value = clientPad.toDataURL();
+  });
+});
+</script>
+
+  <script>
+    // ===== Wizard logic =====
+    document.addEventListener('DOMContentLoaded', () => {
+      const form = document.getElementById('bonForm');
+      const steps = Array.from(document.querySelectorAll('[data-step]'));
+      const startBtn = document.getElementById('startBtn');
+      const nav = document.getElementById('wizardNav');
+      const btnBack = document.getElementById('btnBack');
+      const btnNext = document.getElementById('btnNext');
+      const counter = document.getElementById('wizCounter');
+      const fill = document.getElementById('wizProgressFill');
+      const sigHint = document.getElementById('sigHint');
+      const hiddenSubmit = document.getElementById('hiddenSubmit');
+            // ✅ met la nav à l’intérieur de l’étape (sous les champs)
+      const navInner = nav.querySelector('.wizardNavInner');
+
+      let idx = 0;
+      let wizardOn = false;
+
+      function setActive(i){
+        idx = Math.max(0, Math.min(i, steps.length - 1));
+        steps.forEach((s,k) => s.classList.toggle('active', k === idx));
+
+        counter.textContent = `${idx+1}/${steps.length}`;
+        fill.style.width = `${Math.round(((idx+1)/steps.length)*100)}%`;
+
+        btnBack.disabled = (idx === 0);
+
+        btnNext.textContent = (idx === steps.length - 1) ? 'Valider ✅' : 'Suivant ▶';
+
+        // ✅ injecte la nav SOUS les champs (dans la stepCard)
+        const card = steps[idx].querySelector('.stepCard');
+        if (card){
+          card.appendChild(nav);
+          nav.style.display = 'block';
+        }
+
+        // focus first field
+        const first = steps[idx].querySelector('input,select,textarea,button');
+        if (first && first.focus) setTimeout(() => first.focus(), 60);
+
+        // signatures init
+        const hasSignature = steps[idx].querySelector('#techCanvas, #clientCanvas');
+        if (hasSignature) setTimeout(() => initPads(), 60);
+
+        // ✅ scroll juste au début de la carte active (pas tout en haut de la page)
+        card?.scrollIntoView({ behavior:'smooth', block:'start' });
+      }
+
+      function showStart(){
+        counter.textContent = `0/${steps.length}`;
+        fill.style.width = `0%`;
+        steps.forEach(s => s.classList.remove('active'));
+      }
+
+      function validateStep(i){
+        if (sigHint) { sigHint.classList.remove('show'); }
+
+        const container = steps[i];
+        const fields = Array.from(container.querySelectorAll('input,select,textarea'));
+
+        for (const f of fields){
+          if (!f.hasAttribute('required') || f.disabled) continue;
+
+          if (f.type === 'checkbox' && !f.checked){
+            return { ok:false, msg:"Merci de cocher la case obligatoire.", el:f };
+          }
+
+          if (f.type === 'radio'){
+            const name = f.name;
+            if (name){
+              const any = container.querySelectorAll(`input[type="radio"][name="${CSS.escape(name)}"]:checked`).length > 0;
+              if (!any){
+                return { ok:false, msg:"Merci de sélectionner une option.", el:f };
+              }
+            }
+            continue;
+          }
+
+          if (!String(f.value || '').trim()){
+            return { ok:false, msg:"Merci de remplir ce champ.", el:f };
+          }
+        }
+
+        // special: signatures step
+        if (i === steps.length - 1){
+          if (!techPad || !clientPad || techPad.isEmpty() || clientPad.isEmpty()){
+            if (sigHint){ sigHint.classList.add('show'); }
+            return { ok:false, msg:"Merci de signer les deux zones.", el:null };
+          }
+        }
+
+        return { ok:true };
+      }
+
+      function startWizard(){
+        wizardOn = true;
+        nav.style.display = 'block';
+        startBtn.style.display = 'none';
+        setActive(0);
+      }
+
+      startBtn.addEventListener('click', startWizard);
+
+      btnBack.addEventListener('click', () => setActive(idx - 1));
+
+      btnNext.addEventListener('click', () => {
+        const v = validateStep(idx);
+        if (!v.ok){
+          if (v.el){
+            v.el.scrollIntoView({behavior:'smooth', block:'center'});
+            v.el.focus?.();
+          }
+          return;
+        }
+
+        if (idx === steps.length - 1){
+          // inject signatures then submit
+          document.getElementById('Signature_Tech').value   = techPad.toDataURL();
+          document.getElementById('Signature_Client').value = clientPad.toDataURL();
+
+          btnNext.disabled = true;
+          btnNext.textContent = 'Envoi...';
+          btnBack.disabled = true;
+
+          // submit (keeps your doPost handling)
+          hiddenSubmit.click();
+          return;
+        }
+
+        setActive(idx + 1);
+      });
+
+      // Enter to go next (except textarea)
+      form.addEventListener('keydown', (e) => {
+        if (!wizardOn) return;
+        if (e.key === 'Enter'){
+          const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+          if (tag !== 'textarea'){
+            e.preventDefault();
+            btnNext.click();
+          }
+        }
+      });
+
+      // Initial state
+      showStart();
+
+      // safety: if someone submits by other means
+      form.addEventListener('submit', (e) => {
+        if (!wizardOn){
+          e.preventDefault();
+          startWizard();
+          return;
+        }
+      });
+    });
+  </script>
+</body>
+</html>

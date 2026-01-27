@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { MessageSquare, Loader2, Send, User, RefreshCw, AlertCircle } from 'lucide-react';
 import { Button, Card, Input, useToast } from '@/components/ui';
-import { PageContainer, Topbar } from '@/components/layout';
+import { PageContainer } from '@/components/layout';
 import { getConversationsToken } from '@/lib/conversations';
 import type { Client as TwilioClient } from '@twilio/conversations';
 import type { Conversation, Message, Paginator } from '@twilio/conversations';
@@ -262,13 +262,11 @@ export default function ConversationsPage() {
   };
 
   return (
-    <>
-      <Topbar title="Conversations" subtitle="Messagerie client via Twilio" />
-      <PageContainer>
+    <PageContainer>
         {loading && (
           <div className="flex items-center justify-center py-16">
-            <Loader2 className="w-8 h-8 animate-spin text-vdPrimary" />
-            <span className="ml-3 text-vdMuted">Connexion à Twilio...</span>
+            <Loader2 className="w-8 h-8 animate-spin text-airPrimary" />
+            <span className="ml-3 text-airMuted">Connexion à Twilio...</span>
           </div>
         )}
 
@@ -276,7 +274,7 @@ export default function ConversationsPage() {
           <Card className="p-6 text-center">
             <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
             <p className="text-red-600 font-medium mb-2">Erreur de connexion</p>
-            <p className="text-sm text-vdMuted mb-4">{error}</p>
+            <p className="text-sm text-airMuted mb-4">{error}</p>
             <Button variant="secondary" onClick={initClient}>
               Réessayer
             </Button>
@@ -286,9 +284,9 @@ export default function ConversationsPage() {
         {!loading && !error && client && (
           <div className="flex h-[calc(100vh-180px)] gap-4">
             {/* Left panel: Conversations list */}
-            <div className="w-80 flex-shrink-0 flex flex-col bg-white rounded-2xl border border-vdBorder overflow-hidden">
-              <div className="p-3 border-b border-vdBorder flex items-center justify-between">
-                <span className="text-sm font-medium text-vdDark">
+            <div className="w-80 flex-shrink-0 flex flex-col bg-white rounded-2xl border border-airBorder overflow-hidden">
+              <div className="p-3 border-b border-airBorder flex items-center justify-between">
+                <span className="text-sm font-medium text-airDark">
                   {conversations.length} conversation{conversations.length !== 1 ? 's' : ''}
                 </span>
                 <Button
@@ -302,8 +300,8 @@ export default function ConversationsPage() {
 
               <div className="flex-1 overflow-y-auto">
                 {conversations.length === 0 ? (
-                  <div className="p-4 text-center text-sm text-vdMuted">
-                    <MessageSquare className="w-8 h-8 mx-auto mb-2 text-vdMuted/50" />
+                  <div className="p-4 text-center text-sm text-airMuted">
+                    <MessageSquare className="w-8 h-8 mx-auto mb-2 text-airMuted/50" />
                     Aucune conversation
                   </div>
                 ) : (
@@ -311,24 +309,24 @@ export default function ConversationsPage() {
                     <button
                       key={conv.sid}
                       onClick={() => selectConversation(conv.sid)}
-                      className={`w-full p-3 text-left border-b border-vdBorder hover:bg-vdSurface transition ${
-                        selectedSid === conv.sid ? 'bg-vdPrimary/10' : ''
+                      className={`w-full p-3 text-left border-b border-airBorder hover:bg-airSurface transition ${
+                        selectedSid === conv.sid ? 'bg-airPrimary/10' : ''
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-vdPrimary/20 flex items-center justify-center flex-shrink-0">
-                          <User className="w-5 h-5 text-vdPrimary" />
+                        <div className="w-10 h-10 rounded-full bg-airPrimary/20 flex items-center justify-center flex-shrink-0">
+                          <User className="w-5 h-5 text-airPrimary" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-vdDark truncate">
+                          <p className="font-medium text-airDark truncate">
                             {conv.friendlyName || conv.sid.slice(0, 12)}
                           </p>
                           {conv.lastMessage && (
-                            <p className="text-xs text-vdMuted truncate">{conv.lastMessage}</p>
+                            <p className="text-xs text-airMuted truncate">{conv.lastMessage}</p>
                           )}
                         </div>
                         {conv.lastMessageTime && (
-                          <span className="text-xs text-vdMuted flex-shrink-0">
+                          <span className="text-xs text-airMuted flex-shrink-0">
                             {formatDate(conv.lastMessageTime)}
                           </span>
                         )}
@@ -340,32 +338,32 @@ export default function ConversationsPage() {
             </div>
 
             {/* Right panel: Messages */}
-            <div className="flex-1 flex flex-col bg-white rounded-2xl border border-vdBorder overflow-hidden">
+            <div className="flex-1 flex flex-col bg-white rounded-2xl border border-airBorder overflow-hidden">
               {!selectedSid ? (
-                <div className="flex-1 flex items-center justify-center text-vdMuted">
+                <div className="flex-1 flex items-center justify-center text-airMuted">
                   <div className="text-center">
-                    <MessageSquare className="w-12 h-12 mx-auto mb-3 text-vdMuted/50" />
+                    <MessageSquare className="w-12 h-12 mx-auto mb-3 text-airMuted/50" />
                     <p>Sélectionnez une conversation</p>
                   </div>
                 </div>
               ) : (
                 <>
                   {/* Header */}
-                  <div className="p-4 border-b border-vdBorder">
-                    <p className="font-medium text-vdDark">
+                  <div className="p-4 border-b border-airBorder">
+                    <p className="font-medium text-airDark">
                       {conversations.find((c) => c.sid === selectedSid)?.friendlyName || selectedSid}
                     </p>
-                    <p className="text-xs text-vdMuted">Connecté en tant que {identity}</p>
+                    <p className="text-xs text-airMuted">Connecté en tant que {identity}</p>
                   </div>
 
                   {/* Messages area */}
                   <div className="flex-1 overflow-y-auto p-4 space-y-3">
                     {loadingMessages ? (
                       <div className="flex items-center justify-center py-8">
-                        <Loader2 className="w-6 h-6 animate-spin text-vdPrimary" />
+                        <Loader2 className="w-6 h-6 animate-spin text-airPrimary" />
                       </div>
                     ) : messages.length === 0 ? (
-                      <div className="text-center text-sm text-vdMuted py-8">
+                      <div className="text-center text-sm text-airMuted py-8">
                         Aucun message
                       </div>
                     ) : (
@@ -377,14 +375,14 @@ export default function ConversationsPage() {
                           <div
                             className={`max-w-[70%] rounded-2xl px-4 py-2 ${
                               msg.isAdmin
-                                ? 'bg-vdPrimary text-white rounded-br-sm'
-                                : 'bg-vdSurface text-vdDark rounded-bl-sm'
+                                ? 'bg-airPrimary text-white rounded-br-sm'
+                                : 'bg-airSurface text-airDark rounded-bl-sm'
                             }`}
                           >
                             <p className="text-sm whitespace-pre-wrap">{msg.body}</p>
                             <p
                               className={`text-xs mt-1 ${
-                                msg.isAdmin ? 'text-white/70' : 'text-vdMuted'
+                                msg.isAdmin ? 'text-white/70' : 'text-airMuted'
                               }`}
                             >
                               {formatTime(msg.dateCreated)}
@@ -397,7 +395,7 @@ export default function ConversationsPage() {
                   </div>
 
                   {/* Composer */}
-                  <div className="p-4 border-t border-vdBorder">
+                  <div className="p-4 border-t border-airBorder">
                     <form
                       onSubmit={(e) => {
                         e.preventDefault();
@@ -427,7 +425,6 @@ export default function ConversationsPage() {
             </div>
           </div>
         )}
-      </PageContainer>
-    </>
+    </PageContainer>
   );
 }

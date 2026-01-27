@@ -1,24 +1,28 @@
 import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { CartProvider } from "@/contexts/CartContext";
+import HtmlLang from "@/components/HtmlLang";
 
 export const metadata = {
-  title: "VeloDoctor - Vous roulez, on répare",
-  description: "Service de réparation mobile expert pour vélos et trottinettes électriques. Nous venons à vous.",
+  title: "Aircooling - Votre partenaire pour un contrôle climatique total",
+  description: "Installation, entretien et réparation de systèmes de climatisation, chauffage, réfrigération et ventilation en Belgique.",
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="fr">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet" />
+      </head>
       <body className="antialiased">
-        <CartProvider>
-          <Header />
-          {children}
-          <Footer />
-        </CartProvider>
+        <HtmlLang />
+        <Header />
+        {children}
+        <Footer />
         <a
-          href="https://wa.me/+32456951445"
+          href="https://wa.me/+32487170610"
           target="_blank"
           rel="noopener noreferrer"
           aria-label="Discuter sur WhatsApp"

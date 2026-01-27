@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "VeloDoctor Admin",
-  description: "Administration panel for VeloDoctor",
+  title: "Aircooling Admin",
+  description: "Panel d'administration Aircooling",
 };
 
 export default function RootLayout({

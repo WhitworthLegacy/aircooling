@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Loader2, Search, Plus, User, Phone, Mail, MapPin, Calendar, Wrench, FileText, Edit2, Save, X, Navigation, Clock } from 'lucide-react';
-import { Badge, Button, Card, Input, Select, Modal, useToast, QRCode } from '@/components/ui';
-import { PageContainer, Topbar } from '@/components/layout';
+import { Badge, Button, Card, Input, Select, Modal, useToast } from '@/components/ui';
+import { PageContainer } from '@/components/layout';
 import { apiFetch } from '@/lib/apiClient';
 import { AdminClient, normalizeClientRow, SheetClientRow } from '@/lib/clients';
 import { CRM_STAGES, STATUS_LABELS } from '@/lib/constants';
@@ -180,13 +180,13 @@ export default function ClientsPage() {
 
   const getStageLabel = (stage: string) => {
     const labels: Record<string, string> = {
-      [CRM_STAGES.CLIENTS]: 'Client',
-      [CRM_STAGES.COLLECTE]: 'Collecte',
-      [CRM_STAGES.ATELIER]: 'Atelier',
+      [CRM_STAGES.NOUVEAU]: 'Nouveau',
+      [CRM_STAGES.A_CONTACTER]: 'A contacter',
+      [CRM_STAGES.VISITE_PLANIFIEE]: 'Visite planifiée',
+      [CRM_STAGES.DEVIS_ENVOYE]: 'Devis envoyé',
+      [CRM_STAGES.INTERVENTION]: 'Intervention',
       [CRM_STAGES.TERMINE]: 'Terminé',
-      [CRM_STAGES.ANNULE]: 'Annulé',
-      // Legacy support for existing data
-      'encaissement': 'Encaissement',
+      [CRM_STAGES.PERDU]: 'Perdu',
     };
     return labels[stage] || stage;
   };
@@ -224,16 +224,12 @@ export default function ClientsPage() {
 
   return (
     <>
-      <Topbar
-        title="Clients"
-        subtitle="Toutes les fiches connectées au CRM et aux rendez-vous."
-      />
       <PageContainer>
         <div className="space-y-6">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
-              <h2 className="text-xl font-semibold text-vdDark">Base clients</h2>
-              <p className="text-sm text-vdMuted">
+              <h2 className="text-xl font-semibold text-airDark">Base clients</h2>
+              <p className="text-sm text-airMuted">
                 {clients.length} client{clients.length !== 1 ? 's' : ''} suivis.
               </p>
             </div>
@@ -254,7 +250,7 @@ export default function ClientsPage() {
 
           <div className="grid gap-3 md:grid-cols-3">
             <Input
-              icon={<Search className="w-4 h-4 text-vdMuted" />}
+              icon={<Search className="w-4 h-4 text-airMuted" />}
               placeholder="Rechercher par nom, ID ou zone"
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
@@ -268,7 +264,7 @@ export default function ClientsPage() {
 
           {loading && (
             <div className="flex items-center justify-center py-16">
-              <Loader2 className="w-8 h-8 animate-spin text-vdPrimary" />
+              <Loader2 className="w-8 h-8 animate-spin text-airPrimary" />
             </div>
           )}
 
@@ -281,7 +277,7 @@ export default function ClientsPage() {
           {!loading && !error && (
             <div className="grid gap-4 md:grid-cols-2">
               {filteredClients.length === 0 ? (
-                <Card className="p-6 text-center text-sm text-vdMuted">
+                <Card className="p-6 text-center text-sm text-airMuted">
                   Aucun client ne correspond à ce filtre.
                 </Card>
               ) : (
@@ -289,42 +285,42 @@ export default function ClientsPage() {
                   <Card
                     key={client.id}
                     onClick={() => openClientModal(client)}
-                    className="flex flex-col gap-3 p-5 hover:shadow-vd-md transition cursor-pointer"
+                    className="flex flex-col gap-3 p-5 hover:shadow-md transition cursor-pointer"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-lg font-semibold text-vdDark">{client.name}</p>
-                        <p className="text-xs text-vdMuted">#{client.trackingId || client.id.slice(0, 8)}</p>
+                        <p className="text-lg font-semibold text-airDark">{client.name}</p>
+                        <p className="text-xs text-airMuted">#{client.trackingId || client.id.slice(0, 8)}</p>
                       </div>
                       <Badge size="sm" variant="primary">
                         {getStageLabel(client.stage)}
                       </Badge>
                     </div>
-                    <div className="text-sm text-vdMuted space-y-1">
+                    <div className="text-sm text-airMuted space-y-1">
                       <div className="flex items-center gap-2">
                         <Phone className="w-3.5 h-3.5" />
-                        <span className="text-vdDark">{client.phone || '—'}</span>
+                        <span className="text-airDark">{client.phone || '—'}</span>
                       </div>
                       {client.email && (
                         <div className="flex items-center gap-2">
                           <Mail className="w-3.5 h-3.5" />
-                          <span className="text-vdDark truncate">{client.email}</span>
+                          <span className="text-airDark truncate">{client.email}</span>
                         </div>
                       )}
                       {client.zone && (
                         <div className="flex items-center gap-2">
                           <MapPin className="w-3.5 h-3.5" />
-                          <span className="text-vdDark">{client.zone}</span>
+                          <span className="text-airDark">{client.zone}</span>
                         </div>
                       )}
                     </div>
-                    <div className="flex items-center justify-between pt-2 border-t border-vdBorder">
-                      <span className="text-xs text-vdMuted">
+                    <div className="flex items-center justify-between pt-2 border-t border-airBorder">
+                      <span className="text-xs text-airMuted">
                         {client.createdAt
                           ? new Date(client.createdAt).toLocaleDateString('fr-BE')
                           : '—'}
                       </span>
-                      <span className="text-xs text-vdPrimary">Voir détails →</span>
+                      <span className="text-xs text-airPrimary">Voir détails →</span>
                     </div>
                   </Card>
                 ))
@@ -364,7 +360,7 @@ export default function ClientsPage() {
               {isEditing ? (
                 <>
                   <div>
-                    <label className="text-xs text-vdMuted mb-1 block">Nom complet</label>
+                    <label className="text-xs text-airMuted mb-1 block">Nom complet</label>
                     <Input
                       value={editForm.name || ''}
                       onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
@@ -373,7 +369,7 @@ export default function ClientsPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-xs text-vdMuted mb-1 block">Téléphone</label>
+                      <label className="text-xs text-airMuted mb-1 block">Téléphone</label>
                       <Input
                         value={editForm.phone || ''}
                         onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
@@ -381,7 +377,7 @@ export default function ClientsPage() {
                       />
                     </div>
                     <div>
-                      <label className="text-xs text-vdMuted mb-1 block">Email</label>
+                      <label className="text-xs text-airMuted mb-1 block">Email</label>
                       <Input
                         value={editForm.email || ''}
                         onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
@@ -390,7 +386,7 @@ export default function ClientsPage() {
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs text-vdMuted mb-1 block">Adresse</label>
+                    <label className="text-xs text-airMuted mb-1 block">Adresse</label>
                     <Input
                       value={editForm.address || ''}
                       onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
@@ -399,7 +395,7 @@ export default function ClientsPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-xs text-vdMuted mb-1 block">Zone</label>
+                      <label className="text-xs text-airMuted mb-1 block">Zone</label>
                       <Input
                         value={editForm.zone || ''}
                         onChange={(e) => setEditForm({ ...editForm, zone: e.target.value })}
@@ -407,7 +403,7 @@ export default function ClientsPage() {
                       />
                     </div>
                     <div>
-                      <label className="text-xs text-vdMuted mb-1 block">Véhicule</label>
+                      <label className="text-xs text-airMuted mb-1 block">Véhicule</label>
                       <Input
                         value={editForm.vehicleInfo || ''}
                         onChange={(e) => setEditForm({ ...editForm, vehicleInfo: e.target.value })}
@@ -416,11 +412,11 @@ export default function ClientsPage() {
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs text-vdMuted mb-1 block">Notes</label>
+                    <label className="text-xs text-airMuted mb-1 block">Notes</label>
                     <textarea
                       value={editForm.notes || ''}
                       onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-vdBorder bg-vdSurface text-vdDark focus:outline-none focus:ring-2 focus:ring-vdPrimary/50 min-h-[80px]"
+                      className="w-full px-3 py-2 rounded-xl border border-airBorder bg-airSurface text-airDark focus:outline-none focus:ring-2 focus:ring-airPrimary/50 min-h-[80px]"
                       placeholder="Notes..."
                     />
                   </div>
@@ -437,17 +433,17 @@ export default function ClientsPage() {
               ) : (
                 <>
                   <div className="flex items-center gap-3">
-                    <User className="w-5 h-5 text-vdMuted" />
+                    <User className="w-5 h-5 text-airMuted" />
                     <div>
-                      <p className="font-semibold text-vdDark">{selectedClient.name}</p>
-                      <p className="text-xs text-vdMuted">#{selectedClient.trackingId || selectedClient.id.slice(0, 8)}</p>
+                      <p className="font-semibold text-airDark">{selectedClient.name}</p>
+                      <p className="text-xs text-airMuted">#{selectedClient.trackingId || selectedClient.id.slice(0, 8)}</p>
                     </div>
                   </div>
 
                   {selectedClient.phone && (
                     <div className="flex items-center gap-3">
-                      <Phone className="w-5 h-5 text-vdMuted" />
-                      <a href={`tel:${selectedClient.phone}`} className="text-vdPrimary font-semibold">
+                      <Phone className="w-5 h-5 text-airMuted" />
+                      <a href={`tel:${selectedClient.phone}`} className="text-airPrimary font-semibold">
                         {selectedClient.phone}
                       </a>
                     </div>
@@ -455,8 +451,8 @@ export default function ClientsPage() {
 
                   {selectedClient.email && (
                     <div className="flex items-center gap-3">
-                      <Mail className="w-5 h-5 text-vdMuted" />
-                      <a href={`mailto:${selectedClient.email}`} className="text-vdPrimary">
+                      <Mail className="w-5 h-5 text-airMuted" />
+                      <a href={`mailto:${selectedClient.email}`} className="text-airPrimary">
                         {selectedClient.email}
                       </a>
                     </div>
@@ -465,8 +461,8 @@ export default function ClientsPage() {
                   {selectedClient.address && (
                     <div className="space-y-2">
                       <div className="flex items-start gap-3">
-                        <MapPin className="w-5 h-5 text-vdMuted flex-shrink-0 mt-0.5" />
-                        <span className="text-vdDark">{selectedClient.address}</span>
+                        <MapPin className="w-5 h-5 text-airMuted flex-shrink-0 mt-0.5" />
+                        <span className="text-airDark">{selectedClient.address}</span>
                       </div>
                       <div className="flex gap-2 ml-8">
                         <Button
@@ -491,15 +487,15 @@ export default function ClientsPage() {
 
                   {selectedClient.vehicleInfo && (
                     <div className="flex items-center gap-3">
-                      <Wrench className="w-5 h-5 text-vdMuted" />
-                      <span className="text-vdDark">{selectedClient.vehicleInfo}</span>
+                      <Wrench className="w-5 h-5 text-airMuted" />
+                      <span className="text-airDark">{selectedClient.vehicleInfo}</span>
                     </div>
                   )}
 
                   {selectedClient.notes && (
-                    <div className="p-3 rounded-lg bg-vdSurface text-sm">
-                      <p className="text-xs text-vdMuted mb-1">Notes:</p>
-                      <p className="text-vdDark">{selectedClient.notes}</p>
+                    <div className="p-3 rounded-lg bg-airSurface text-sm">
+                      <p className="text-xs text-airMuted mb-1">Notes:</p>
+                      <p className="text-airDark">{selectedClient.notes}</p>
                     </div>
                   )}
                 </>
@@ -508,31 +504,31 @@ export default function ClientsPage() {
 
             {/* History section */}
             {!isEditing && (
-              <div className="border-t border-vdBorder pt-4 space-y-4">
-                <h3 className="font-semibold text-vdDark flex items-center gap-2">
+              <div className="border-t border-airBorder pt-4 space-y-4">
+                <h3 className="font-semibold text-airDark flex items-center gap-2">
                   <Calendar className="w-4 h-4" />
                   Historique
                 </h3>
 
                 {loadingHistory ? (
                   <div className="flex items-center justify-center py-4">
-                    <Loader2 className="w-5 h-5 animate-spin text-vdPrimary" />
+                    <Loader2 className="w-5 h-5 animate-spin text-airPrimary" />
                   </div>
                 ) : (
                   <>
                     {/* Appointments */}
                     {clientAppointments.length > 0 && (
                       <div>
-                        <p className="text-xs text-vdMuted mb-2 flex items-center gap-1">
+                        <p className="text-xs text-airMuted mb-2 flex items-center gap-1">
                           <Clock className="w-3 h-3" />
                           Rendez-vous ({clientAppointments.length})
                         </p>
                         <div className="space-y-2">
                           {clientAppointments.slice(0, 5).map((appt) => (
-                            <div key={appt.id} className="p-2 rounded-lg bg-vdSurface text-sm flex items-center justify-between">
+                            <div key={appt.id} className="p-2 rounded-lg bg-airSurface text-sm flex items-center justify-between">
                               <div>
-                                <span className="font-medium text-vdDark">{appt.service_type || 'RDV'}</span>
-                                <span className="text-vdMuted ml-2">
+                                <span className="font-medium text-airDark">{appt.service_type || 'RDV'}</span>
+                                <span className="text-airMuted ml-2">
                                   {appt.date || appt.scheduled_at?.split('T')[0]}
                                 </span>
                               </div>
@@ -548,16 +544,16 @@ export default function ClientsPage() {
                     {/* Quotes */}
                     {clientQuotes.length > 0 && (
                       <div>
-                        <p className="text-xs text-vdMuted mb-2 flex items-center gap-1">
+                        <p className="text-xs text-airMuted mb-2 flex items-center gap-1">
                           <FileText className="w-3 h-3" />
                           Devis ({clientQuotes.length})
                         </p>
                         <div className="space-y-2">
                           {clientQuotes.map((quote) => (
-                            <div key={quote.id} className="p-2 rounded-lg bg-vdSurface text-sm flex items-center justify-between">
+                            <div key={quote.id} className="p-2 rounded-lg bg-airSurface text-sm flex items-center justify-between">
                               <div>
-                                <span className="font-medium text-vdDark">{quote.quote_number}</span>
-                                <span className="text-vdMuted ml-2">
+                                <span className="font-medium text-airDark">{quote.quote_number}</span>
+                                <span className="text-airMuted ml-2">
                                   {quote.total_amount?.toFixed(2)}€
                                 </span>
                               </div>
@@ -571,7 +567,7 @@ export default function ClientsPage() {
                     )}
 
                     {clientAppointments.length === 0 && clientQuotes.length === 0 && (
-                      <p className="text-sm text-vdMuted text-center py-4">
+                      <p className="text-sm text-airMuted text-center py-4">
                         Aucun historique pour ce client.
                       </p>
                     )}
@@ -582,17 +578,16 @@ export default function ClientsPage() {
 
             {/* QR Code for tracking */}
             {!isEditing && (
-              <div className="border-t border-vdBorder pt-4">
-                <p className="text-xs text-vdMuted mb-2">QR Code suivi client</p>
+              <div className="border-t border-airBorder pt-4">
+                <p className="text-xs text-airMuted mb-2">QR Code suivi client</p>
                 <div className="flex items-center gap-4">
-                  <QRCode
-                    value={`https://velodoctor.be/suivi/${selectedClient.trackingId || selectedClient.id.slice(0, 8)}`}
-                    size={80}
-                  />
+                  <div className="w-20 h-20 bg-airSurface rounded-lg flex items-center justify-center text-xs text-airMuted border border-airBorder">
+                    QR
+                  </div>
                   <div className="flex-1">
-                    <p className="text-xs text-vdMuted">Lien de suivi:</p>
-                    <p className="text-sm text-vdDark font-mono break-all">
-                      velodoctor.be/suivi/{selectedClient.trackingId || selectedClient.id.slice(0, 8)}
+                    <p className="text-xs text-airMuted">Lien de suivi:</p>
+                    <p className="text-sm text-airDark font-mono break-all">
+                      aircooling.be/suivi/{selectedClient.trackingId || selectedClient.id.slice(0, 8)}
                     </p>
                   </div>
                 </div>
@@ -601,7 +596,7 @@ export default function ClientsPage() {
 
             {/* Actions */}
             {!isEditing && (
-              <div className="border-t border-vdBorder pt-4">
+              <div className="border-t border-airBorder pt-4">
                 <Button
                   variant="secondary"
                   className="w-full"

@@ -23,12 +23,12 @@ export default function Card({
   };
 
   const hoverStyles = hover
-    ? 'transition-shadow duration-200 hover:shadow-vd-md'
+    ? 'transition-shadow duration-200 hover:shadow-md'
     : '';
 
   return (
     <div
-      className={`bg-white rounded-2xl border border-vdBorder shadow-vd-sm ${hoverStyles} ${paddings[padding]} ${className}`}
+      className={`bg-white rounded-2xl border border-airBorder shadow-sm ${hoverStyles} ${paddings[padding]} ${className}`}
     >
       {children}
     </div>

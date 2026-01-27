@@ -20,7 +20,7 @@ import {
   Filter,
 } from 'lucide-react';
 import { Badge, Button, Card, Input, Modal, Select, useToast } from '@/components/ui';
-import { PageContainer, Topbar } from '@/components/layout';
+import { PageContainer } from '@/components/layout';
 import { apiFetch } from '@/lib/apiClient';
 import { STATUS_LABELS, STATUS_COLORS } from '@/lib/constants';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
@@ -420,7 +420,6 @@ export default function AppointmentsPage() {
 
   return (
     <>
-      <Topbar title="Rendez-vous" subtitle={`${todayAppointments.length} aujourd'hui`} />
       <PageContainer>
         <div className="space-y-4">
           {/* Header avec navigation semaine */}
@@ -431,7 +430,7 @@ export default function AppointmentsPage() {
                 <Button variant="ghost" size="sm" icon={<ChevronLeft className="w-5 h-5" />} onClick={goToPreviousWeek} />
                 <button
                   onClick={goToToday}
-                  className="px-3 py-1.5 text-sm font-semibold text-vdDark hover:bg-vdSurface rounded-lg transition"
+                  className="px-3 py-1.5 text-sm font-semibold text-airDark hover:bg-airSurface rounded-lg transition"
                 >
                   {weekLabel}
                 </button>
@@ -458,7 +457,7 @@ export default function AppointmentsPage() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-3 py-2 text-sm rounded-xl border border-vdBorder bg-white focus:outline-none focus:ring-2 focus:ring-vdPrimary/50"
+                className="px-3 py-2 text-sm rounded-xl border border-airBorder bg-white focus:outline-none focus:ring-2 focus:ring-airPrimary/50"
               >
                 <option value="">Tous les statuts</option>
                 {APPOINTMENT_STATUSES.map(s => (
@@ -468,7 +467,7 @@ export default function AppointmentsPage() {
               <select
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
-                className="px-3 py-2 text-sm rounded-xl border border-vdBorder bg-white focus:outline-none focus:ring-2 focus:ring-vdPrimary/50"
+                className="px-3 py-2 text-sm rounded-xl border border-airBorder bg-white focus:outline-none focus:ring-2 focus:ring-airPrimary/50"
               >
                 <option value="">Tous les types</option>
                 {SERVICE_TYPES.map(s => (
@@ -485,7 +484,7 @@ export default function AppointmentsPage() {
           {/* Loading */}
           {loading && (
             <div className="flex items-center justify-center py-16">
-              <Loader2 className="w-8 h-8 animate-spin text-vdPrimary" />
+              <Loader2 className="w-8 h-8 animate-spin text-airPrimary" />
             </div>
           )}
 
@@ -510,15 +509,15 @@ export default function AppointmentsPage() {
                 return (
                   <div key={dateKey}>
                     {/* Day header */}
-                    <div className={`sticky top-0 z-10 flex items-center gap-2 py-2 px-1 mb-2 ${isToday ? 'bg-gradient-to-r from-vdPrimary/10 to-vdAccent/10' : 'bg-vdSurface/80'} backdrop-blur-sm rounded-lg`}>
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold ${isToday ? 'bg-gradient-to-br from-vdPrimary to-vdAccent text-white' : 'bg-white text-vdDark border border-vdBorder'}`}>
+                    <div className={`sticky top-0 z-10 flex items-center gap-2 py-2 px-1 mb-2 ${isToday ? 'bg-gradient-to-r from-airPrimary/10 to-airAccent/10' : 'bg-airSurface/80'} backdrop-blur-sm rounded-lg`}>
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold ${isToday ? 'bg-gradient-to-br from-airPrimary to-airAccent text-white' : 'bg-white text-airDark border border-airBorder'}`}>
                         {date.getDate()}
                       </div>
                       <div>
-                        <p className={`text-sm font-semibold ${isToday ? 'text-vdPrimary' : 'text-vdDark'}`}>
+                        <p className={`text-sm font-semibold ${isToday ? 'text-airPrimary' : 'text-airDark'}`}>
                           {isToday ? "Aujourd'hui" : DAYS_FR_FULL[date.getDay()]}
                         </p>
-                        <p className="text-xs text-vdMuted">
+                        <p className="text-xs text-airMuted">
                           {dayAppointments.length} RDV
                         </p>
                       </div>
@@ -526,7 +525,7 @@ export default function AppointmentsPage() {
 
                     {/* Appointments for this day */}
                     {dayAppointments.length === 0 ? (
-                      <Card className="p-4 text-center text-sm text-vdMuted">
+                      <Card className="p-4 text-center text-sm text-airMuted">
                         Aucun rendez-vous
                       </Card>
                     ) : (
@@ -547,9 +546,9 @@ export default function AppointmentsPage() {
                             >
                               <div className="flex">
                                 {/* Time column */}
-                                <div className="w-16 flex-shrink-0 bg-vdSurface/50 flex flex-col items-center justify-center py-3 border-r border-vdBorder">
-                                  <span className="text-lg font-bold text-vdDark">{appt.slot?.slice(0, 5)}</span>
-                                  <span className="text-[10px] text-vdMuted">{getSlotEndTime(appt.slot || '09:00')}</span>
+                                <div className="w-16 flex-shrink-0 bg-airSurface/50 flex flex-col items-center justify-center py-3 border-r border-airBorder">
+                                  <span className="text-lg font-bold text-airDark">{appt.slot?.slice(0, 5)}</span>
+                                  <span className="text-[10px] text-airMuted">{getSlotEndTime(appt.slot || '09:00')}</span>
                                 </div>
 
                                 {/* Content */}
@@ -558,11 +557,11 @@ export default function AppointmentsPage() {
                                     <div className="flex items-center gap-2">
                                       <span className="text-lg">{serviceInfo.icon}</span>
                                       <div>
-                                        <p className="font-semibold text-vdDark">
-                                          {trackingNum && <span className="text-vdPrimary">#{trackingNum} </span>}
+                                        <p className="font-semibold text-airDark">
+                                          {trackingNum && <span className="text-airPrimary">#{trackingNum} </span>}
                                           {displayName}
                                         </p>
-                                        <p className="text-xs text-vdMuted">{serviceInfo.label}</p>
+                                        <p className="text-xs text-airMuted">{serviceInfo.label}</p>
                                       </div>
                                     </div>
                                     <Badge size="sm" className={statusInfo.color}>
@@ -571,7 +570,7 @@ export default function AppointmentsPage() {
                                   </div>
 
                                   {displayAddress && (
-                                    <div className="flex items-center gap-1.5 text-xs text-vdMuted mt-2">
+                                    <div className="flex items-center gap-1.5 text-xs text-airMuted mt-2">
                                       <MapPin className="w-3.5 h-3.5" />
                                       <span className="truncate">{displayAddress}</span>
                                     </div>
@@ -604,8 +603,8 @@ export default function AppointmentsPage() {
                         key={dateKey}
                         className={`text-center py-2 px-1 rounded-xl ${
                           isToday
-                            ? 'bg-gradient-to-br from-vdPrimary to-vdAccent text-white'
-                            : 'bg-vdSurface text-vdDark'
+                            ? 'bg-gradient-to-br from-airPrimary to-airAccent text-white'
+                            : 'bg-airSurface text-airDark'
                         }`}
                       >
                         <p className="text-xs font-medium opacity-80">{DAYS_FR[date.getDay()]}</p>
@@ -619,7 +618,7 @@ export default function AppointmentsPage() {
                 <div className="space-y-1">
                   {TIME_SLOTS.map((slot) => (
                     <div key={slot} className="grid grid-cols-[60px_repeat(7,1fr)] gap-1">
-                      <div className="flex items-center justify-end pr-2 text-xs text-vdMuted">
+                      <div className="flex items-center justify-end pr-2 text-xs text-airMuted">
                         {slot}
                       </div>
 
@@ -632,7 +631,7 @@ export default function AppointmentsPage() {
                           <div
                             key={`${dateKey}-${slot}`}
                             className={`min-h-[60px] rounded-xl border p-1 ${
-                              isToday ? 'bg-vdPrimary/5 border-vdPrimary/20' : 'bg-white border-vdBorder/50'
+                              isToday ? 'bg-airPrimary/5 border-airPrimary/20' : 'bg-white border-airBorder/50'
                             }`}
                           >
                             {cellAppointments.map((appt) => {
@@ -664,24 +663,24 @@ export default function AppointmentsPage() {
           {!loading && !error && (
             <div className="hidden md:grid grid-cols-4 gap-3 mt-6">
               <Card className="p-3 text-center">
-                <p className="text-2xl font-bold text-vdDark">{appointments.length}</p>
-                <p className="text-xs text-vdMuted">Cette semaine</p>
+                <p className="text-2xl font-bold text-airDark">{appointments.length}</p>
+                <p className="text-xs text-airMuted">Cette semaine</p>
               </Card>
               <Card className="p-3 text-center">
                 <p className="text-2xl font-bold text-amber-600">{pendingCount}</p>
-                <p className="text-xs text-vdMuted">En attente</p>
+                <p className="text-xs text-airMuted">En attente</p>
               </Card>
               <Card className="p-3 text-center">
                 <p className="text-2xl font-bold text-blue-600">
                   {appointments.filter(a => a.status === 'confirmed').length}
                 </p>
-                <p className="text-xs text-vdMuted">Confirmés</p>
+                <p className="text-xs text-airMuted">Confirmés</p>
               </Card>
               <Card className="p-3 text-center">
                 <p className="text-2xl font-bold text-emerald-600">
                   {appointments.filter(a => a.status === 'done').length}
                 </p>
-                <p className="text-xs text-vdMuted">Terminés</p>
+                <p className="text-xs text-airMuted">Terminés</p>
               </Card>
             </div>
           )}
@@ -709,11 +708,11 @@ export default function AppointmentsPage() {
             </div>
 
             {/* Date/Time */}
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-vdSurface">
-              <Calendar className="w-5 h-5 text-vdPrimary" />
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-airSurface">
+              <Calendar className="w-5 h-5 text-airPrimary" />
               <div>
-                <p className="font-semibold text-vdDark">{formatDateFR(selectedAppointment.date)}</p>
-                <p className="text-sm text-vdMuted">
+                <p className="font-semibold text-airDark">{formatDateFR(selectedAppointment.date)}</p>
+                <p className="text-sm text-airMuted">
                   {selectedAppointment.slot} - {getSlotEndTime(selectedAppointment.slot || '09:00')}
                 </p>
               </div>
@@ -722,18 +721,18 @@ export default function AppointmentsPage() {
             {/* Client info */}
             <div className="space-y-3">
               <div className="flex items-center gap-3">
-                <User className="w-5 h-5 text-vdMuted" />
-                <span className="font-semibold text-vdDark">
+                <User className="w-5 h-5 text-airMuted" />
+                <span className="font-semibold text-airDark">
                   {selectedAppointment.customer_name || selectedAppointment.client_full_name || 'Client'}
                 </span>
               </div>
 
               {(selectedAppointment.customer_phone || selectedAppointment.client_phone) && (
                 <div className="flex items-center gap-3">
-                  <Phone className="w-5 h-5 text-vdMuted" />
+                  <Phone className="w-5 h-5 text-airMuted" />
                   <a
                     href={`tel:${selectedAppointment.customer_phone || selectedAppointment.client_phone}`}
-                    className="text-vdPrimary font-medium"
+                    className="text-airPrimary font-medium"
                   >
                     {selectedAppointment.customer_phone || selectedAppointment.client_phone}
                   </a>
@@ -743,8 +742,8 @@ export default function AppointmentsPage() {
               {(selectedAppointment.client_address || selectedAppointment.address) && (
                 <div className="space-y-2">
                   <div className="flex items-start gap-3">
-                    <MapPin className="w-5 h-5 text-vdMuted flex-shrink-0 mt-0.5" />
-                    <span className="text-vdDark">
+                    <MapPin className="w-5 h-5 text-airMuted flex-shrink-0 mt-0.5" />
+                    <span className="text-airDark">
                       {selectedAppointment.client_address || selectedAppointment.address}
                     </span>
                   </div>
@@ -770,16 +769,16 @@ export default function AppointmentsPage() {
               )}
 
               {selectedAppointment.notes && (
-                <div className="p-3 rounded-xl bg-vdSurface text-sm">
-                  <p className="text-xs text-vdMuted mb-1">Notes:</p>
-                  <p className="text-vdDark">{selectedAppointment.notes}</p>
+                <div className="p-3 rounded-xl bg-airSurface text-sm">
+                  <p className="text-xs text-airMuted mb-1">Notes:</p>
+                  <p className="text-airDark">{selectedAppointment.notes}</p>
                 </div>
               )}
             </div>
 
             {/* Status change */}
-            <div className="border-t border-vdBorder pt-4">
-              <p className="text-xs text-vdMuted mb-3">Changer le statut:</p>
+            <div className="border-t border-airBorder pt-4">
+              <p className="text-xs text-airMuted mb-3">Changer le statut:</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {APPOINTMENT_STATUSES.map((s) => (
                   <Button
@@ -808,13 +807,13 @@ export default function AppointmentsPage() {
         <div className="space-y-4">
           {/* Client selection */}
           <div>
-            <label className="block text-xs font-semibold text-vdPrimary mb-1">
+            <label className="block text-xs font-semibold text-airPrimary mb-1">
               Client existant
             </label>
             <select
               value={newForm.client_id}
               onChange={(e) => handleClientSelect(e.target.value)}
-              className="w-full rounded-xl border border-vdBorder px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-vdPrimary"
+              className="w-full rounded-xl border border-airBorder px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-airPrimary"
             >
               <option value="">-- Nouveau client --</option>
               {clients.map((c) => (
@@ -870,11 +869,11 @@ export default function AppointmentsPage() {
           />
 
           <div>
-            <label className="block text-xs font-semibold text-vdPrimary mb-1">Notes</label>
+            <label className="block text-xs font-semibold text-airPrimary mb-1">Notes</label>
             <textarea
               value={newForm.notes}
               onChange={(e) => setNewForm((prev) => ({ ...prev, notes: e.target.value }))}
-              className="w-full rounded-xl border border-vdBorder px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-vdPrimary min-h-[80px] resize-none"
+              className="w-full rounded-xl border border-airBorder px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-airPrimary min-h-[80px] resize-none"
               placeholder="Notes supplémentaires..."
             />
           </div>

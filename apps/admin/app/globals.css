@@ -1,75 +1,44 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 /* ============================================
-   Poppins Font - VeloDoctor Brand Typography
-   ============================================ */
-
-@font-face {
-  font-family: "Poppins";
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url("/fonts/poppins-latin-400-normal.woff2") format("woff2");
-}
-
-@font-face {
-  font-family: "Poppins";
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url("/fonts/poppins-latin-500-normal.woff2") format("woff2");
-}
-
-@font-face {
-  font-family: "Poppins";
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url("/fonts/poppins-latin-600-normal.woff2") format("woff2");
-}
-
-@font-face {
-  font-family: "Poppins";
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url("/fonts/poppins-latin-700-normal.woff2") format("woff2");
-}
-
-@font-face {
-  font-family: "Poppins";
-  font-style: normal;
-  font-weight: 800;
-  font-display: swap;
-  src: url("/fonts/poppins-latin-800-normal.woff2") format("woff2");
-}
-
-/* ============================================
-   VeloDoctor Design System - Admin
+   Aircooling Design System - Admin
    CSS Variables + Base Styles
    ============================================ */
 
 :root {
-  /* Brand Colors - USE SPARINGLY AS ACCENTS */
-  --vd-primary: #00ACC2;    /* Moonstone (blue) - accents only */
-  --vd-accent: #FF6D00;     /* Pumpkin (orange) - CTAs only */
-  --vd-dark: #293133;       /* Gunmetal - primary text */
-  --vd-muted: #6B7280;      /* Gray-500 - secondary text */
-  --vd-surface: #F7FAFB;    /* Very light gray - subtle bg */
-  --vd-border: #E5E7EB;     /* Gray-200 - borders */
-  --vd-white: #FFFFFF;      /* Pure white - main bg */
+  /* Brand Colors */
+  --air-primary: #1B3B8A;
+  --air-accent: #CC0A0A;
+  --air-dark: #293133;
+  --air-muted: #6B7280;
+  --air-surface: #F7FAFB;
+  --air-border: #E5E7EB;
+  --air-white: #FFFFFF;
 
   /* Font */
-  --font-poppins: "Poppins", "Helvetica Neue", Arial, sans-serif;
+  --font-inter: "Inter", "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Tailwind v4 theme */
+@theme {
+  --color-airPrimary: #1B3B8A;
+  --color-airAccent: #CC0A0A;
+  --color-airDark: #293133;
+  --color-airMuted: #6B7280;
+  --color-airSurface: #F7FAFB;
+  --color-airBorder: #E5E7EB;
+
+  --color-brand-primary: #1B3B8A;
+  --color-brand-accent: #CC0A0A;
+  --color-brand-dark: #293133;
+  --color-brand-border: #E5E7EB;
 }
 
 /* Base Styles */
 body {
-  font-family: var(--font-poppins), -apple-system, sans-serif;
-  background: var(--vd-surface);
-  color: var(--vd-dark);
+  font-family: var(--font-inter), -apple-system, sans-serif;
+  background: var(--air-surface);
+  color: var(--air-dark);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -78,44 +47,26 @@ body {
 h1, h2, h3, h4, h5, h6 {
   font-weight: 700;
   line-height: 1.2;
-  color: var(--vd-dark);
+  color: var(--air-dark);
   letter-spacing: -0.025em;
 }
 
-h1 {
-  font-size: 2.5rem;
-  font-weight: 800;
-}
-
-h2 {
-  font-size: 1.875rem;
-  font-weight: 700;
-}
-
-h3 {
-  font-size: 1.5rem;
-  font-weight: 600;
-}
+h1 { font-size: 2.5rem; font-weight: 800; }
+h2 { font-size: 1.875rem; font-weight: 700; }
+h3 { font-size: 1.5rem; font-weight: 600; }
 
 @media (min-width: 768px) {
-  h1 {
-    font-size: 3rem;
-  }
-  h2 {
-    font-size: 2.25rem;
-  }
-  h3 {
-    font-size: 1.75rem;
-  }
+  h1 { font-size: 3rem; }
+  h2 { font-size: 2.25rem; }
+  h3 { font-size: 1.75rem; }
 }
 
-/* Paragraphs - HIGH CONTRAST */
 p {
   line-height: 1.7;
   color: rgb(55, 65, 81);
 }
 
-/* Accent Underline Helper - Gradient */
+/* Accent Underline Helper */
 .accent-underline {
   position: relative;
   display: inline-block;
@@ -128,7 +79,7 @@ p {
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(90deg, var(--vd-accent), var(--vd-primary));
+  background: linear-gradient(90deg, var(--air-primary), var(--air-accent));
   border-radius: 2px;
 }
 
@@ -139,37 +90,24 @@ p {
 
 /* Focus States */
 *:focus-visible {
-  outline: 2px solid var(--vd-primary);
+  outline: 2px solid var(--air-primary);
   outline-offset: 2px;
   border-radius: 0.375rem;
 }
 
 /* Selection */
 ::selection {
-  background-color: var(--vd-accent);
+  background-color: var(--air-primary);
   color: white;
 }
 
 ::-moz-selection {
-  background-color: var(--vd-accent);
+  background-color: var(--air-primary);
   color: white;
 }
 
 /* Scrollbar styling */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--vd-surface);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--vd-border);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--vd-muted);
-}
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--air-surface); }
+::-webkit-scrollbar-thumb { background: var(--air-border); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--air-muted); }

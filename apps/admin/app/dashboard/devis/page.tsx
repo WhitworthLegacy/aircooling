@@ -20,7 +20,7 @@ import {
   MoreVertical,
   RefreshCw,
 } from "lucide-react";
-import { PageContainer, Topbar } from "@/components/layout";
+import { PageContainer } from "@/components/layout";
 import { Badge, Button, Card, Input, Modal, Select, useToast } from "@/components/ui";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { apiFetch } from "@/lib/apiClient";
@@ -286,17 +286,16 @@ export default function DevisPage() {
 
   return (
     <>
-      <Topbar title="Devis" />
       <PageContainer>
         <div className="space-y-6">
           {/* Header */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-vdDark flex items-center gap-2">
+              <h1 className="text-2xl font-bold text-airDark flex items-center gap-2">
                 <FileText className="w-6 h-6" />
                 Gestion des Devis
               </h1>
-              <p className="text-sm text-vdMuted mt-1">
+              <p className="text-sm text-airMuted mt-1">
                 {stats.total} devis • {stats.accepted} acceptés ({stats.totalAmount.toFixed(0)}€)
               </p>
             </div>
@@ -308,45 +307,45 @@ export default function DevisPage() {
           {/* Stats Cards */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             <Card
-              className={`cursor-pointer transition ${filterStatus === "all" ? "ring-2 ring-vdPrimary" : ""}`}
+              className={`cursor-pointer transition ${filterStatus === "all" ? "ring-2 ring-airPrimary" : ""}`}
               onClick={() => setFilterStatus("all")}
             >
-              <p className="text-xs text-vdMuted uppercase">Total</p>
-              <p className="text-2xl font-bold text-vdDark">{stats.total}</p>
+              <p className="text-xs text-airMuted uppercase">Total</p>
+              <p className="text-2xl font-bold text-airDark">{stats.total}</p>
             </Card>
             <Card
               className={`cursor-pointer transition ${filterStatus === "draft" ? "ring-2 ring-gray-400" : ""}`}
               onClick={() => setFilterStatus("draft")}
             >
-              <p className="text-xs text-vdMuted uppercase">Brouillons</p>
+              <p className="text-xs text-airMuted uppercase">Brouillons</p>
               <p className="text-2xl font-bold text-gray-600">{stats.draft}</p>
             </Card>
             <Card
               className={`cursor-pointer transition ${filterStatus === "sent" ? "ring-2 ring-blue-400" : ""}`}
               onClick={() => setFilterStatus("sent")}
             >
-              <p className="text-xs text-vdMuted uppercase">Envoyés</p>
+              <p className="text-xs text-airMuted uppercase">Envoyés</p>
               <p className="text-2xl font-bold text-blue-600">{stats.sent}</p>
             </Card>
             <Card
               className={`cursor-pointer transition ${filterStatus === "accepted" ? "ring-2 ring-green-400" : ""}`}
               onClick={() => setFilterStatus("accepted")}
             >
-              <p className="text-xs text-vdMuted uppercase">Acceptés</p>
+              <p className="text-xs text-airMuted uppercase">Acceptés</p>
               <p className="text-2xl font-bold text-green-600">{stats.accepted}</p>
             </Card>
             <Card
               className={`cursor-pointer transition ${filterStatus === "refused" ? "ring-2 ring-red-400" : ""}`}
               onClick={() => setFilterStatus("refused")}
             >
-              <p className="text-xs text-vdMuted uppercase">Refusés</p>
+              <p className="text-xs text-airMuted uppercase">Refusés</p>
               <p className="text-2xl font-bold text-red-600">{stats.refused}</p>
             </Card>
           </div>
 
           {/* Search */}
           <Input
-            icon={<Search className="w-4 h-4 text-vdMuted" />}
+            icon={<Search className="w-4 h-4 text-airMuted" />}
             placeholder="Chercher par numéro, client, email, téléphone..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -355,7 +354,7 @@ export default function DevisPage() {
           {/* Loading */}
           {loading && (
             <div className="flex items-center justify-center py-16">
-              <Loader2 className="w-8 h-8 animate-spin text-vdPrimary" />
+              <Loader2 className="w-8 h-8 animate-spin text-airPrimary" />
             </div>
           )}
 
@@ -363,7 +362,7 @@ export default function DevisPage() {
           {!loading && (
             <div className="space-y-3">
               {filteredQuotes.length === 0 ? (
-                <div className="text-center py-12 text-vdMuted">
+                <div className="text-center py-12 text-airMuted">
                   <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
                   <p>Aucun devis trouvé</p>
                 </div>
@@ -374,30 +373,30 @@ export default function DevisPage() {
                     <Card
                       key={quote.id}
                       onClick={() => openQuoteDetail(quote)}
-                      className="cursor-pointer hover:shadow-vd-md transition-shadow"
+                      className="cursor-pointer hover:shadow-md transition-shadow"
                     >
                       <div className="flex items-center justify-between gap-4">
                         {/* Left: Quote info */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="font-bold text-vdDark">{quote.quote_number}</span>
+                            <span className="font-bold text-airDark">{quote.quote_number}</span>
                             <Badge size="sm" className={statusConfig.color}>
                               {statusConfig.icon}
                               <span className="ml-1">{statusConfig.label}</span>
                             </Badge>
                           </div>
-                          <div className="flex items-center gap-3 text-sm text-vdMuted">
+                          <div className="flex items-center gap-3 text-sm text-airMuted">
                             <span className="flex items-center gap-1">
                               <User className="w-3.5 h-3.5" />
                               {quote.clients?.full_name || "Client inconnu"}
                             </span>
                             {quote.clients?.tracking_id && (
-                              <span className="text-xs bg-vdSurface px-2 py-0.5 rounded">
+                              <span className="text-xs bg-airSurface px-2 py-0.5 rounded">
                                 #{String(quote.clients.tracking_id).padStart(4, "0")}
                               </span>
                             )}
                           </div>
-                          <div className="flex items-center gap-3 mt-1 text-xs text-vdMuted">
+                          <div className="flex items-center gap-3 mt-1 text-xs text-airMuted">
                             <span className="flex items-center gap-1">
                               <Calendar className="w-3 h-3" />
                               {formatDate(quote.created_at)}
@@ -413,8 +412,8 @@ export default function DevisPage() {
 
                         {/* Right: Amount */}
                         <div className="text-right">
-                          <p className="text-xl font-bold text-vdPrimary">{quote.total?.toFixed(2)}€</p>
-                          <p className="text-xs text-vdMuted">
+                          <p className="text-xl font-bold text-airPrimary">{quote.total?.toFixed(2)}€</p>
+                          <p className="text-xs text-airMuted">
                             {quote.quote_items?.length || 0} ligne(s)
                           </p>
                         </div>
@@ -497,28 +496,28 @@ export default function DevisPage() {
             </div>
 
             {/* Client Info */}
-            <div className="bg-vdSurface rounded-xl p-4">
-              <h3 className="font-semibold text-vdDark mb-3 flex items-center gap-2">
+            <div className="bg-airSurface rounded-xl p-4">
+              <h3 className="font-semibold text-airDark mb-3 flex items-center gap-2">
                 <User className="w-4 h-4" /> Client
               </h3>
               <div className="grid md:grid-cols-2 gap-3 text-sm">
                 <div>
-                  <p className="text-vdMuted text-xs">Nom</p>
-                  <p className="font-medium text-vdDark">{selectedQuote.clients?.full_name || "—"}</p>
+                  <p className="text-airMuted text-xs">Nom</p>
+                  <p className="font-medium text-airDark">{selectedQuote.clients?.full_name || "—"}</p>
                 </div>
                 <div>
-                  <p className="text-vdMuted text-xs">N° Dossier</p>
-                  <p className="font-medium text-vdDark">
+                  <p className="text-airMuted text-xs">N° Dossier</p>
+                  <p className="font-medium text-airDark">
                     #{selectedQuote.clients?.tracking_id ? String(selectedQuote.clients.tracking_id).padStart(4, "0") : "—"}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Mail className="w-4 h-4 text-vdMuted" />
+                  <Mail className="w-4 h-4 text-airMuted" />
                   <span>{selectedQuote.clients?.email || "—"}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Phone className="w-4 h-4 text-vdMuted" />
-                  <a href={`tel:${selectedQuote.clients?.phone}`} className="text-vdPrimary">
+                  <Phone className="w-4 h-4 text-airMuted" />
+                  <a href={`tel:${selectedQuote.clients?.phone}`} className="text-airPrimary">
                     {selectedQuote.clients?.phone || "—"}
                   </a>
                 </div>
@@ -526,14 +525,14 @@ export default function DevisPage() {
             </div>
 
             {/* Timeline */}
-            <div className="bg-white rounded-xl border border-vdBorder p-4">
-              <h3 className="font-semibold text-vdDark mb-3 flex items-center gap-2">
+            <div className="bg-white rounded-xl border border-airBorder p-4">
+              <h3 className="font-semibold text-airDark mb-3 flex items-center gap-2">
                 <Clock className="w-4 h-4" /> Historique
               </h3>
               <div className="space-y-2 text-sm">
                 <div className="flex items-center gap-3">
                   <div className="w-2 h-2 rounded-full bg-gray-400" />
-                  <span className="text-vdMuted">Créé le {formatDateTime(selectedQuote.created_at)}</span>
+                  <span className="text-airMuted">Créé le {formatDateTime(selectedQuote.created_at)}</span>
                 </div>
                 {selectedQuote.sent_at && (
                   <div className="flex items-center gap-3">
@@ -559,8 +558,8 @@ export default function DevisPage() {
             </div>
 
             {/* Quote Items */}
-            <div className="bg-white rounded-xl border border-vdBorder overflow-hidden">
-              <div className="bg-vdDark text-white px-4 py-2 text-sm font-semibold flex">
+            <div className="bg-white rounded-xl border border-airBorder overflow-hidden">
+              <div className="bg-airDark text-white px-4 py-2 text-sm font-semibold flex">
                 <span className="flex-1">Description</span>
                 <span className="w-16 text-center">Qté</span>
                 <span className="w-20 text-right">P.U.</span>
@@ -569,17 +568,17 @@ export default function DevisPage() {
               {selectedQuote.quote_items?.map((item, index) => (
                 <div
                   key={item.id}
-                  className={`px-4 py-3 flex text-sm ${index % 2 === 0 ? "bg-white" : "bg-vdSurface/50"}`}
+                  className={`px-4 py-3 flex text-sm ${index % 2 === 0 ? "bg-white" : "bg-airSurface/50"}`}
                 >
-                  <span className="flex-1 text-vdDark">{item.description}</span>
-                  <span className="w-16 text-center text-vdMuted">{item.quantity}</span>
-                  <span className="w-20 text-right text-vdMuted">{item.unit_price?.toFixed(2)}€</span>
-                  <span className="w-24 text-right font-semibold text-vdDark">{item.total?.toFixed(2)}€</span>
+                  <span className="flex-1 text-airDark">{item.description}</span>
+                  <span className="w-16 text-center text-airMuted">{item.quantity}</span>
+                  <span className="w-20 text-right text-airMuted">{item.unit_price?.toFixed(2)}€</span>
+                  <span className="w-24 text-right font-semibold text-airDark">{item.total?.toFixed(2)}€</span>
                 </div>
               ))}
-              <div className="px-4 py-3 bg-gradient-to-r from-orange-50 to-blue-50 border-t-2 border-vdPrimary flex">
-                <span className="flex-1 font-bold text-vdDark">TOTAL TTC</span>
-                <span className="w-24 text-right text-xl font-bold text-vdPrimary">
+              <div className="px-4 py-3 bg-gradient-to-r from-orange-50 to-blue-50 border-t-2 border-airPrimary flex">
+                <span className="flex-1 font-bold text-airDark">TOTAL TTC</span>
+                <span className="w-24 text-right text-xl font-bold text-airPrimary">
                   {selectedQuote.total?.toFixed(2)}€
                 </span>
               </div>
@@ -591,10 +590,10 @@ export default function DevisPage() {
       {/* Delete Confirmation Modal */}
       <Modal isOpen={deleteConfirmOpen} onClose={() => setDeleteConfirmOpen(false)} title="Confirmer la suppression">
         <div className="space-y-4">
-          <p className="text-vdDark">
+          <p className="text-airDark">
             Êtes-vous sûr de vouloir supprimer le devis <strong>{selectedQuote?.quote_number}</strong> ?
           </p>
-          <p className="text-sm text-vdMuted">Cette action est irréversible.</p>
+          <p className="text-sm text-airMuted">Cette action est irréversible.</p>
           <div className="flex justify-end gap-3">
             <Button variant="ghost" onClick={() => setDeleteConfirmOpen(false)}>
               Annuler

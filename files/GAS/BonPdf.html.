@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <style>
+    /* A4 */
+    @page { size: A4; margin: 14mm; }
+
+    :root{
+      --primary:#0077c8;
+      --border:#dcdcdc;
+      --muted:#64748b;
+      --radius:12px;
+    }
+
+    *{ box-sizing:border-box; }
+
+    body{
+      font-family: Arial, Helvetica, sans-serif;
+      color:#0f172a;
+      font-size:12px;
+      margin:0;
+      padding:0;
+    }
+
+    .sheet{
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:14px;
+    }
+
+    /* Header */
+    .top{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:12px;
+      padding-bottom:10px;
+      border-bottom:1px solid var(--border);
+      margin-bottom:12px;
+    }
+    .brand{
+      font-size:18px;
+      font-weight:800;
+      color:var(--primary);
+      margin:0 0 4px 0;
+    }
+    .small{
+      color:var(--muted);
+      font-size:11px;
+      line-height:1.35;
+    }
+    .pill{
+      display:inline-block;
+      background:#e6f2fb;
+      color:var(--primary);
+      font-weight:700;
+      font-size:10px;
+      padding:6px 10px;
+      border-radius:999px;
+      text-transform:uppercase;
+      letter-spacing:.06em;
+      margin-top:6px;
+    }
+
+    .metaBox{
+      text-align:right;
+      min-width:220px;
+    }
+    .metaBox .title{
+      font-size:16px;
+      font-weight:900;
+      margin:0 0 6px 0;
+    }
+    .metaLine{
+      font-size:11px;
+      color:var(--muted);
+      margin:2px 0;
+    }
+
+    /* Sections */
+    .sectionTitle{
+      margin:12px 0 6px;
+      font-size:11px;
+      font-weight:900;
+      color:var(--muted);
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+
+    .grid2{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+    }
+
+    .box{
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:10px;
+    }
+
+    .kv{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      margin:5px 0;
+      border-bottom:1px dashed #e5e7eb;
+      padding-bottom:4px;
+    }
+    .kv:last-child{border-bottom:0;padding-bottom:0}
+    .k{color:var(--muted)}
+    .v{font-weight:700}
+
+    .para{
+      white-space:pre-wrap;
+      line-height:1.35;
+      min-height:46px;
+    }
+
+    .amounts{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:10px;
+    }
+    .amount{
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:10px;
+    }
+    .amount .lab{color:var(--muted); font-size:11px;}
+    .amount .val{font-size:14px; font-weight:900; margin-top:4px;}
+
+    /* Signatures */
+    .signGrid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      margin-top:8px;
+    }
+    .sigBox{
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:10px;
+      height:180px;
+    }
+    .sigTitle{
+      font-size:11px;
+      color:var(--muted);
+      font-weight:900;
+      margin:0 0 8px 0;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+    .sigCanvas{
+      width:100%;
+      height:140px;
+      border:1px dashed #94a3b8;
+      border-radius:10px;
+      background:#fff;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      overflow:hidden;
+    }
+    .sigImg{
+      width:100%;
+      height:140px;
+      object-fit:contain;
+      display:block;
+    }
+    .sigMissing{
+      color:#64748b;
+      font-size:11px;
+    }
+
+    .footer{
+      margin-top:10px;
+      font-size:10px;
+      color:var(--muted);
+      line-height:1.35;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="sheet">
+    <div class="top">
+      <div>
+        <div class="brand">AirCooling</div>
+        <div class="small">
+          Rue de Belgrade 75 – 1190 Forest, Belgique<br>
+          GSM : 0487 17 06 10 • Tél : 02 725 33 85 • email : info@aircooling.be
+        </div>
+        <div class="pill">Bon d’intervention / commande</div>
+      </div>
+
+      <div class="metaBox">
+        <div class="title">Bon d’intervention</div>
+        <div class="metaLine"><b>Bon n° :</b> <?= bon.Bon_N ?></div>
+        <div class="metaLine"><b>ID :</b> <?= bon.bonId ?></div>
+        <div class="metaLine"><b>Date :</b> <?= bon.formattedNow ?></div>
+      </div>
+    </div>
+
+    <div class="sectionTitle">Client</div>
+    <div class="grid2">
+      <div class="box">
+        <div class="kv"><div class="k">Nom</div><div class="v"><?= bon.Client_Nom ?></div></div>
+        <div class="kv"><div class="k">Adresse</div><div class="v"><?= bon.Client_Adresse ?></div></div>
+        <div class="kv"><div class="k">Localité</div><div class="v"><?= bon.Client_Localite ?></div></div>
+        <div class="kv"><div class="k">TVA</div><div class="v"><?= bon.Client_TVA ?></div></div>
+      </div>
+      <div class="box">
+        <div class="kv"><div class="k">Responsable</div><div class="v"><?= bon.Resp_Nom ?></div></div>
+        <div class="kv"><div class="k">Adresse resp.</div><div class="v"><?= bon.Resp_Adresse ?></div></div>
+        <div class="kv"><div class="k">Localité resp.</div><div class="v"><?= bon.Resp_Localite ?></div></div>
+        <div class="kv"><div class="k">TVA resp.</div><div class="v"><?= bon.Resp_TVA ?></div></div>
+      </div>
+    </div>
+
+    <div class="sectionTitle">Contact</div>
+    <div class="grid2">
+      <div class="box">
+        <div class="kv"><div class="k">Téléphone</div><div class="v"><?= bon.Telephone ?></div></div>
+      </div>
+      <div class="box">
+        <div class="kv"><div class="k">Email</div><div class="v"><?= bon.Email ?></div></div>
+      </div>
+    </div>
+
+    <div class="sectionTitle">Intervention</div>
+    <div class="grid2">
+      <div class="box">
+        <div class="kv"><div class="k">Technicien</div><div class="v"><?= bon.Technicien_Nom ?></div></div>
+        <div class="kv"><div class="k">Type</div><div class="v"><?= bon.Type_Intervention ?></div></div>
+      </div>
+      <div class="box">
+        <div class="kv"><div class="k">Date</div><div class="v"><?= bon.Date_Intervention ?></div></div>
+        <div class="kv"><div class="k">Heures</div><div class="v"><?= bon.Heure_Debut ?> → <?= bon.Heure_Fin ?></div></div>
+      </div>
+    </div>
+
+    <div class="sectionTitle">Travaux réalisés</div>
+    <div class="box para"><?= bon.Travaux_Realises ?></div>
+
+    <div class="sectionTitle">Fournitures</div>
+    <div class="box para"><?= bon.Fournitures ?></div>
+
+    <div class="sectionTitle">Montant à payer</div>
+    <div class="amounts">
+      <div class="amount">
+        <div class="lab">Total HT</div>
+        <div class="val"><?= bon.Total_HT ?> €</div>
+      </div>
+      <div class="amount">
+        <div class="lab">TVA</div>
+        <div class="val"><?= bon.TVA_EUR ?> €</div>
+      </div>
+      <div class="amount">
+        <div class="lab">Total TTC</div>
+        <div class="val"><?= bon.Total_TTC ?> €</div>
+      </div>
+      <div class="amount">
+        <div class="lab">Acompte</div>
+        <div class="val"><?= bon.Acompte ?> €</div>
+      </div>
+      <div class="amount">
+        <div class="lab">Mode de paiement</div>
+        <div class="val"><?= bon.Mode_Paiement ?></div>
+      </div>
+      <div class="amount">
+        <div class="lab">Statut</div>
+        <div class="val">En attente</div>
+      </div>
+    </div>
+
+    <div class="sectionTitle">Signatures</div>
+    <div class="signGrid">
+      <div class="sigBox">
+        <div class="sigTitle">Technicien</div>
+        <div class="sigCanvas">
+          <? if (bon.sigTechDataUrl) { ?>
+            <!-- IMPORTANT: RAW OUTPUT -->
+            <img class="sigImg" src="<?!= bon.sigTechDataUrl ?>" alt="Signature technicien">
+          <? } else { ?>
+            <div class="sigMissing">Aucune signature</div>
+          <? } ?>
+        </div>
+      </div>
+
+      <div class="sigBox">
+        <div class="sigTitle">Client</div>
+        <div class="sigCanvas">
+          <? if (bon.sigClientDataUrl) { ?>
+            <!-- IMPORTANT: RAW OUTPUT -->
+            <img class="sigImg" src="<?!= bon.sigClientDataUrl ?>" alt="Signature client">
+          <? } else { ?>
+            <div class="sigMissing">Aucune signature</div>
+          <? } ?>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      En signant ce document, le client reconnaît avoir pris connaissance des travaux réalisés et accepte le montant indiqué.<br>
+      AirCooling – Votre partenaire en confort • www.aircooling.be
+    </div>
+  </div>
+</body>
+</html>

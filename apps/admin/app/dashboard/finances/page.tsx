@@ -3,9 +3,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Euro, TrendingUp, FileText, Calendar, Download, Loader2, CheckCircle, Clock, XCircle, X, Phone, Mail, User, Car } from 'lucide-react';
 import { Badge, Button, Card, Modal, useToast } from '@/components/ui';
-import { PageContainer, Topbar } from '@/components/layout';
+import { PageContainer } from '@/components/layout';
 import { apiFetch } from '@/lib/apiClient';
-import { useUserRole } from '@/hooks/useUserRole';
+import { useUserRole } from '@/lib/useUserRole';
 import { useRouter } from 'next/navigation';
 import { formatTrackingId } from '@/lib/clients';
 
@@ -197,25 +197,24 @@ export default function FinancesPage() {
   if (roleLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-vdPrimary" />
+        <Loader2 className="w-8 h-8 animate-spin text-airPrimary" />
       </div>
     );
   }
 
   return (
     <>
-      <Topbar title="Finances" subtitle="Suivi des devis et encaissements" />
       <PageContainer>
         <div className="space-y-6">
           {/* Month selector */}
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-3">
-              <Calendar className="w-5 h-5 text-vdMuted" />
+              <Calendar className="w-5 h-5 text-airMuted" />
               <input
                 type="month"
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(e.target.value)}
-                className="px-3 py-2 rounded-xl border border-vdBorder bg-vdSurface text-vdDark focus:outline-none focus:ring-2 focus:ring-vdPrimary/50"
+                className="px-3 py-2 rounded-xl border border-airBorder bg-airSurface text-airDark focus:outline-none focus:ring-2 focus:ring-airPrimary/50"
               />
             </div>
             <Button
@@ -231,7 +230,7 @@ export default function FinancesPage() {
 
           {loading ? (
             <div className="flex items-center justify-center h-32">
-              <Loader2 className="w-8 h-8 animate-spin text-vdPrimary" />
+              <Loader2 className="w-8 h-8 animate-spin text-airPrimary" />
             </div>
           ) : (
             <>
@@ -264,7 +263,7 @@ export default function FinancesPage() {
 
               {/* Quote status breakdown */}
               <Card className="p-6">
-                <h2 className="text-lg font-semibold text-vdDark mb-4">Répartition des devis</h2>
+                <h2 className="text-lg font-semibold text-airDark mb-4">Répartition des devis</h2>
                 <div className="flex items-center gap-4 flex-wrap">
                   <Badge variant="success" className="flex items-center gap-1 px-3 py-1.5">
                     <CheckCircle className="w-4 h-4" />
@@ -283,12 +282,12 @@ export default function FinancesPage() {
 
               {/* Recent quotes */}
               <Card padding="none">
-                <div className="p-4 border-b border-vdBorder">
-                  <h2 className="text-lg font-semibold text-vdDark">Devis du mois</h2>
+                <div className="p-4 border-b border-airBorder">
+                  <h2 className="text-lg font-semibold text-airDark">Devis du mois</h2>
                 </div>
-                <div className="divide-y divide-vdBorder max-h-[400px] overflow-y-auto">
+                <div className="divide-y divide-airBorder max-h-[400px] overflow-y-auto">
                   {monthQuotes.length === 0 ? (
-                    <p className="p-4 text-sm text-vdMuted text-center">Aucun devis ce mois</p>
+                    <p className="p-4 text-sm text-airMuted text-center">Aucun devis ce mois</p>
                   ) : (
                     monthQuotes.map((quote) => {
                       const clientName = quote.clients?.full_name || quote.client_name || 'Client';
@@ -300,16 +299,16 @@ export default function FinancesPage() {
                         <div
                           key={quote.id}
                           onClick={() => openQuoteModal(quote)}
-                          className="p-4 flex items-center justify-between gap-4 cursor-pointer hover:bg-vdSurface/50 transition"
+                          className="p-4 flex items-center justify-between gap-4 cursor-pointer hover:bg-airSurface/50 transition"
                         >
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <p className="font-semibold text-vdDark truncate">{clientName}</p>
+                              <p className="font-semibold text-airDark truncate">{clientName}</p>
                               <Badge size="sm" variant="accent">
                                 N° {formatTrackingId(trackingId, quote.client_id)}
                               </Badge>
                             </div>
-                            <div className="flex items-center gap-3 text-xs text-vdMuted">
+                            <div className="flex items-center gap-3 text-xs text-airMuted">
                               <span>{quote.created_at?.split('T')[0]}</span>
                               {vehicleInfo && (
                                 <span className="truncate">
@@ -317,7 +316,7 @@ export default function FinancesPage() {
                                 </span>
                               )}
                               {quote.quote_number && (
-                                <span className="text-vdPrimary">#{quote.quote_number}</span>
+                                <span className="text-airPrimary">#{quote.quote_number}</span>
                               )}
                             </div>
                           </div>
@@ -332,7 +331,7 @@ export default function FinancesPage() {
                               {quote.status === 'accepted' ? 'Accepté' :
                                (quote.status === 'rejected' || quote.status === 'refused') ? 'Refusé' : 'En attente'}
                             </Badge>
-                            <span className="font-bold text-vdDark whitespace-nowrap">{amount.toFixed(0)}€</span>
+                            <span className="font-bold text-airDark whitespace-nowrap">{amount.toFixed(0)}€</span>
                           </div>
                         </div>
                       );
@@ -351,10 +350,10 @@ export default function FinancesPage() {
               {/* Header */}
               <div className="flex items-start justify-between">
                 <div>
-                  <h2 className="text-xl font-bold text-vdDark">
+                  <h2 className="text-xl font-bold text-airDark">
                     Devis {selectedQuote.quote_number ? `#${selectedQuote.quote_number}` : ''}
                   </h2>
-                  <p className="text-sm text-vdMuted">
+                  <p className="text-sm text-airMuted">
                     Créé le {selectedQuote.created_at?.split('T')[0]}
                     {selectedQuote.valid_until && ` · Valide jusqu'au ${selectedQuote.valid_until}`}
                   </p>
@@ -372,33 +371,33 @@ export default function FinancesPage() {
 
               {/* Client Info */}
               {selectedQuote.clients && (
-                <div className="bg-vdSurface/50 rounded-xl p-4 space-y-2">
+                <div className="bg-airSurface/50 rounded-xl p-4 space-y-2">
                   <div className="flex items-center gap-2 mb-3">
-                    <User className="w-4 h-4 text-vdMuted" />
-                    <span className="text-sm font-semibold text-vdDark">Client</span>
+                    <User className="w-4 h-4 text-airMuted" />
+                    <span className="text-sm font-semibold text-airDark">Client</span>
                     <Badge size="sm" variant="accent">
                       N° {formatTrackingId(selectedQuote.clients.tracking_id, selectedQuote.client_id)}
                     </Badge>
                   </div>
-                  <p className="text-lg font-bold text-vdDark">{selectedQuote.clients.full_name}</p>
+                  <p className="text-lg font-bold text-airDark">{selectedQuote.clients.full_name}</p>
                   {selectedQuote.clients.phone && (
                     <div className="flex items-center gap-2 text-sm">
-                      <Phone className="w-4 h-4 text-vdMuted" />
-                      <a href={`tel:${selectedQuote.clients.phone}`} className="text-vdPrimary">
+                      <Phone className="w-4 h-4 text-airMuted" />
+                      <a href={`tel:${selectedQuote.clients.phone}`} className="text-airPrimary">
                         {selectedQuote.clients.phone}
                       </a>
                     </div>
                   )}
                   {selectedQuote.clients.email && (
                     <div className="flex items-center gap-2 text-sm">
-                      <Mail className="w-4 h-4 text-vdMuted" />
-                      <span className="text-vdDark">{selectedQuote.clients.email}</span>
+                      <Mail className="w-4 h-4 text-airMuted" />
+                      <span className="text-airDark">{selectedQuote.clients.email}</span>
                     </div>
                   )}
                   {selectedQuote.clients.vehicle_info && (
                     <div className="flex items-center gap-2 text-sm">
-                      <Car className="w-4 h-4 text-vdMuted" />
-                      <span className="text-vdDark">
+                      <Car className="w-4 h-4 text-airMuted" />
+                      <span className="text-airDark">
                         {VEHICLE_LABELS[selectedQuote.clients.vehicle_info] || selectedQuote.clients.vehicle_info}
                       </span>
                     </div>
@@ -409,31 +408,31 @@ export default function FinancesPage() {
               {/* Quote Items */}
               {selectedQuote.quote_items && selectedQuote.quote_items.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-semibold text-vdDark mb-3">Détail du devis</h3>
-                  <div className="border border-vdBorder rounded-xl overflow-hidden">
+                  <h3 className="text-sm font-semibold text-airDark mb-3">Détail du devis</h3>
+                  <div className="border border-airBorder rounded-xl overflow-hidden">
                     <table className="w-full text-sm">
-                      <thead className="bg-vdSurface/50">
+                      <thead className="bg-airSurface/50">
                         <tr>
-                          <th className="text-left px-4 py-2 text-vdMuted font-medium">Description</th>
-                          <th className="text-center px-4 py-2 text-vdMuted font-medium">Qté</th>
-                          <th className="text-right px-4 py-2 text-vdMuted font-medium">P.U.</th>
-                          <th className="text-right px-4 py-2 text-vdMuted font-medium">Total</th>
+                          <th className="text-left px-4 py-2 text-airMuted font-medium">Description</th>
+                          <th className="text-center px-4 py-2 text-airMuted font-medium">Qté</th>
+                          <th className="text-right px-4 py-2 text-airMuted font-medium">P.U.</th>
+                          <th className="text-right px-4 py-2 text-airMuted font-medium">Total</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-vdBorder">
+                      <tbody className="divide-y divide-airBorder">
                         {selectedQuote.quote_items.map((item) => (
                           <tr key={item.id}>
-                            <td className="px-4 py-3 text-vdDark">{item.description}</td>
-                            <td className="px-4 py-3 text-center text-vdMuted">{item.quantity}</td>
-                            <td className="px-4 py-3 text-right text-vdMuted">{item.unit_price?.toFixed(2)}€</td>
-                            <td className="px-4 py-3 text-right font-semibold text-vdDark">{item.total?.toFixed(2)}€</td>
+                            <td className="px-4 py-3 text-airDark">{item.description}</td>
+                            <td className="px-4 py-3 text-center text-airMuted">{item.quantity}</td>
+                            <td className="px-4 py-3 text-right text-airMuted">{item.unit_price?.toFixed(2)}€</td>
+                            <td className="px-4 py-3 text-right font-semibold text-airDark">{item.total?.toFixed(2)}€</td>
                           </tr>
                         ))}
                       </tbody>
-                      <tfoot className="bg-vdSurface/30">
+                      <tfoot className="bg-airSurface/30">
                         <tr>
-                          <td colSpan={3} className="px-4 py-3 text-right font-bold text-vdDark">Total</td>
-                          <td className="px-4 py-3 text-right font-bold text-lg text-vdPrimary">
+                          <td colSpan={3} className="px-4 py-3 text-right font-bold text-airDark">Total</td>
+                          <td className="px-4 py-3 text-right font-bold text-lg text-airPrimary">
                             {getQuoteAmount(selectedQuote).toFixed(2)}€
                           </td>
                         </tr>
@@ -445,16 +444,16 @@ export default function FinancesPage() {
 
               {/* No items fallback */}
               {(!selectedQuote.quote_items || selectedQuote.quote_items.length === 0) && (
-                <div className="bg-vdSurface/30 rounded-xl p-6 text-center">
-                  <p className="text-2xl font-bold text-vdPrimary mb-1">
+                <div className="bg-airSurface/30 rounded-xl p-6 text-center">
+                  <p className="text-2xl font-bold text-airPrimary mb-1">
                     {getQuoteAmount(selectedQuote).toFixed(2)}€
                   </p>
-                  <p className="text-sm text-vdMuted">Montant total du devis</p>
+                  <p className="text-sm text-airMuted">Montant total du devis</p>
                 </div>
               )}
 
               {/* Actions */}
-              <div className="flex justify-end gap-3 pt-4 border-t border-vdBorder">
+              <div className="flex justify-end gap-3 pt-4 border-t border-airBorder">
                 <Button variant="secondary" onClick={closeQuoteModal}>
                   Fermer
                 </Button>

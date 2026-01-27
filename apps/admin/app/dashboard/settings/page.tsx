@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Settings as SettingsIcon, Download, Loader2, FileSpreadsheet, Calendar, MessageSquare, CheckCircle, XCircle } from 'lucide-react';
 import { Button, Card, useToast } from '@/components/ui';
-import { PageContainer, Topbar } from '@/components/layout';
+import { PageContainer } from '@/components/layout';
 import { apiFetch } from '@/lib/apiClient';
 import { getConversationsToken } from '@/lib/conversations';
 
@@ -144,27 +144,25 @@ export default function SettingsPage() {
   };
 
   return (
-    <>
-      <Topbar title="Paramètres" subtitle="Valeurs partagées, authentification et exports" />
-      <PageContainer>
+    <PageContainer>
         <div className="space-y-6">
           {/* Export section */}
           <Card className="p-6 space-y-4">
             <div className="flex items-center gap-3">
               <FileSpreadsheet className="w-5 h-5 text-green-600" />
-              <h2 className="text-lg font-semibold text-vdDark">Export comptable</h2>
+              <h2 className="text-lg font-semibold text-airDark">Export comptable</h2>
             </div>
-            <p className="text-sm text-vdMuted">
+            <p className="text-sm text-airMuted">
               Exportez vos données au format CSV pour votre comptabilité. Sélectionnez le mois et le type de données.
             </p>
 
             <div className="flex items-center gap-3">
-              <Calendar className="w-4 h-4 text-vdMuted" />
+              <Calendar className="w-4 h-4 text-airMuted" />
               <input
                 type="month"
                 value={exportMonth}
                 onChange={(e) => setExportMonth(e.target.value)}
-                className="px-3 py-2 rounded-xl border border-vdBorder bg-vdSurface text-vdDark focus:outline-none focus:ring-2 focus:ring-vdPrimary/50"
+                className="px-3 py-2 rounded-xl border border-airBorder bg-airSurface text-airDark focus:outline-none focus:ring-2 focus:ring-airPrimary/50"
               />
             </div>
 
@@ -203,9 +201,9 @@ export default function SettingsPage() {
           <Card className="p-6 space-y-4">
             <div className="flex items-center gap-3">
               <MessageSquare className="w-5 h-5 text-blue-600" />
-              <h2 className="text-lg font-semibold text-vdDark">Twilio Conversations</h2>
+              <h2 className="text-lg font-semibold text-airDark">Twilio Conversations</h2>
             </div>
-            <p className="text-sm text-vdMuted">
+            <p className="text-sm text-airMuted">
               Testez la connexion au service Twilio Conversations pour la messagerie client.
             </p>
             <div className="flex items-center gap-3">
@@ -239,10 +237,10 @@ export default function SettingsPage() {
 
           <Card className="p-6 space-y-4">
             <div className="flex items-center gap-3">
-              <SettingsIcon className="w-5 h-5 text-vdAccent" />
-              <h2 className="text-lg font-semibold text-vdDark">Authentification</h2>
+              <SettingsIcon className="w-5 h-5 text-airAccent" />
+              <h2 className="text-lg font-semibold text-airDark">Authentification</h2>
             </div>
-            <p className="text-sm text-vdMuted">
+            <p className="text-sm text-airMuted">
               Les sessions sont gérées par Supabase. Vérifiez les clés dans les variables d&apos;environnement (`NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`).
             </p>
             <div className="flex flex-wrap gap-3">
@@ -257,10 +255,10 @@ export default function SettingsPage() {
 
           <Card className="p-6 space-y-4">
             <div className="flex items-center gap-3">
-              <SettingsIcon className="w-5 h-5 text-vdPrimary" />
-              <h2 className="text-lg font-semibold text-vdDark">Infra & notifications</h2>
+              <SettingsIcon className="w-5 h-5 text-airPrimary" />
+              <h2 className="text-lg font-semibold text-airDark">Infra & notifications</h2>
             </div>
-            <p className="text-sm text-vdMuted">
+            <p className="text-sm text-airMuted">
               Ajoutez ici vos règles de réservation, vos webhooks (Stripe, Resend) et vos préférences de vérification.
             </p>
             <div className="flex flex-wrap gap-3">
@@ -273,7 +271,6 @@ export default function SettingsPage() {
             </div>
           </Card>
         </div>
-      </PageContainer>
-    </>
+    </PageContainer>
   );
 }

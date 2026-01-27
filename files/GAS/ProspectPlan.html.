@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Croquis du plan – AirCooling</title>
+
+  <style>
+    :root{
+      --primary:#0077c8;
+      --bg:#f5f5f7;
+      --muted:#64748b;
+      --radius:14px;
+      --safeTop: env(safe-area-inset-top, 0px);
+      --safeBottom: env(safe-area-inset-bottom, 0px);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      font-family:system-ui,-apple-system,Segoe UI,sans-serif;
+      background:var(--bg);
+      margin:0;
+      color:#0f172a;
+      overscroll-behavior:none;
+    }
+
+    .wrap{
+      max-width:980px;
+      margin:0 auto;
+      padding:12px;
+      padding-bottom: calc(92px + var(--safeBottom));
+    }
+
+    .card{
+      background:#fff;
+      border-radius:var(--radius);
+      box-shadow:0 10px 30px rgba(0,0,0,.08);
+      overflow:hidden;
+      border:1px solid #e5e7eb;
+    }
+
+    .top{
+      padding: calc(14px + var(--safeTop)) 14px 10px;
+      border-bottom:1px solid #e5e7eb;
+    }
+    h1{margin:0;font-size:18px}
+    .muted{margin:6px 0 0;color:var(--muted);font-size:13px;line-height:1.35}
+
+    .note{
+      margin-top:10px;
+      padding:10px 12px;
+      border-radius:12px;
+      background:#eef6ff;
+      border:1px solid #d6eaff;
+      color:#0b3a5a;
+      font-size:13px;
+      font-weight:900;
+    }
+    .note small{
+      display:block;
+      margin-top:4px;
+      font-weight:700;
+      color:#3b5568;
+    }
+
+    .canvasWrap{
+      background:#f8fafc;
+      border-top:1px solid #e5e7eb;
+      border-bottom:1px solid #e5e7eb;
+      padding:24px;
+    }
+
+    .canvasFrame{
+      background:#fff;
+      border:2px solid #cbd5e1;
+      border-radius:16px;
+      padding:16px;
+      max-width:100%;
+      margin:0 auto;
+    }
+
+    canvas{
+      display:block;
+      width:100%;
+      height:420px;
+      max-height:520px;
+      min-height:360px;
+      border-radius:12px;
+      background:#fff;
+      touch-action:none;
+    }
+
+    @media (orientation: landscape) {
+      .wrap{ padding-bottom: calc(84px + var(--safeBottom)); }
+      canvas{ height: 460px; max-height:560px; min-height:320px; }
+      h1{font-size:20px}
+      .canvasWrap{ padding:16px; }
+    }
+
+    @media (min-width: 900px){
+      canvas{ height:480px; max-height:600px; }
+    }
+
+    .actions{
+      position:fixed;
+      left:0; right:0; bottom:0;
+      padding: 14px 14px calc(14px + var(--safeBottom));
+      background:rgba(245,245,247,.96);
+      backdrop-filter:blur(6px);
+      border-top:1px solid #e5e7eb;
+      z-index:50;
+    }
+    .actionsInner{
+      max-width:980px;
+      margin:0 auto;
+      display:flex;
+      gap:10px;
+    }
+    .btn{
+      flex:1;
+      border:0;
+      border-radius:16px;
+      padding:16px 14px;
+      font-size:16px;
+      font-weight:1000;
+      cursor:pointer;
+    }
+    .btn.secondary{background:#e5e7eb;color:#0f172a}
+    .btn.primary{background:var(--primary);color:#fff}
+    .btn[disabled]{opacity:.55;cursor:default}
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="top">
+        <h1>Croquis du plan</h1>
+        <p class="muted">Dessine le plan rapidement. Puis clique sur “Enregistrer le croquis”.</p>
+
+        <div class="note">
+          📱 Pour dessiner plus facilement, mets ton téléphone en <b>paysage</b>.
+          <small>(Le dessin fonctionne aussi en portrait.)</small>
+        </div>
+      </div>
+
+      <form id="planForm" method="post" action="<?= scriptUrl ?>">
+        <input type="hidden" name="formType" value="PROSPECT_PLAN">
+        <input type="hidden" name="prospectId" value="<?= prospectId ?>">
+        <input type="hidden" name="Plan_Croquis" id="Plan_Croquis">
+
+        <div class="canvasWrap">
+          <div class="canvasFrame">
+            <canvas id="planCanvas"></canvas>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="actions">
+    <div class="actionsInner">
+      <button type="button" class="btn secondary" id="undoBtn" disabled>↩︎ Retour</button>
+      <button type="button" class="btn primary" id="saveBtn">Enregistrer le croquis ✅</button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('planCanvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: false });
+    const undoBtn = document.getElementById('undoBtn');
+
+    function setBrush(){
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = '#0f172a';
+    }
+
+    function resizeCanvas(){
+      const ratio = Math.max(window.devicePixelRatio || 1, 1);
+      const rect = canvas.getBoundingClientRect();
+
+      canvas.width  = Math.max(1, Math.round(rect.width  * ratio));
+      canvas.height = Math.max(1, Math.round(rect.height * ratio));
+
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      setBrush();
+    }
+
+    function safeResize(){
+      requestAnimationFrame(() => requestAnimationFrame(resizeCanvas));
+    }
+
+    window.addEventListener('resize', safeResize, { passive:true });
+    window.addEventListener('orientationchange', safeResize, { passive:true });
+    safeResize();
+
+    // ===== UNDO STACK (robuste) =====
+    const historyStack = [];
+    const MAX_HISTORY = 50;
+
+    function updateUndoUI(){
+      undoBtn.disabled = historyStack.length === 0;
+    }
+
+    function saveState(){
+      try{
+        if (historyStack.length >= MAX_HISTORY) historyStack.shift();
+        // snapshot PNG de l'état ACTUEL (avant le nouveau trait)
+        historyStack.push(canvas.toDataURL('image/png'));
+        updateUndoUI();
+      }catch(e){
+        console.warn('Undo save failed', e);
+      }
+    }
+
+    function restoreFromDataUrl(dataUrl){
+      const img = new Image();
+      img.onload = () => {
+        // IMPORTANT: clear + draw en coordonnées bitmap
+        ctx.setTransform(1,0,0,1,0,0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        // remettre le transform CSS pixels
+        const ratio = Math.max(window.devicePixelRatio || 1, 1);
+        ctx.setTransform(ratio,0,0,ratio,0,0);
+        setBrush();
+      };
+      img.src = dataUrl;
+    }
+
+    function undoLast(){
+      if (!historyStack.length) return;
+      const lastState = historyStack.pop();
+      updateUndoUI();
+      restoreFromDataUrl(lastState);
+    }
+
+    // ===== DRAWING =====
+    let drawing = false;
+    let last = null;
+
+    function getPos(ev){
+      const r = canvas.getBoundingClientRect();
+      const e = (ev.touches && ev.touches[0]) ? ev.touches[0] : ev;
+      return { x: e.clientX - r.left, y: e.clientY - r.top };
+    }
+
+    function start(ev){
+      // sauvegarde l'état juste avant de dessiner
+      saveState();
+      drawing = true;
+      last = getPos(ev);
+    }
+
+    function move(ev){
+      if(!drawing) return;
+      ev.preventDefault();
+      const p = getPos(ev);
+      ctx.beginPath();
+      ctx.moveTo(last.x, last.y);
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+      last = p;
+    }
+
+    function end(){
+      drawing = false;
+      last = null;
+    }
+
+    canvas.addEventListener('mousedown', start);
+    canvas.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', end);
+
+    canvas.addEventListener('touchstart', start, { passive:false });
+    canvas.addEventListener('touchmove', move, { passive:false });
+    window.addEventListener('touchend', end, { passive:true });
+
+    // Buttons
+    undoBtn.addEventListener('click', undoLast);
+
+    document.getElementById('saveBtn').addEventListener('click', () => {
+      document.getElementById('Plan_Croquis').value = canvas.toDataURL('image/png');
+
+      const btn = document.getElementById('saveBtn');
+      btn.disabled = true;
+      btn.textContent = 'Enregistrement...';
+
+      document.getElementById('planForm').submit();
+    });
+
+    updateUndoUI();
+  </script>
+</body>
+</html>

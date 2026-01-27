@@ -10,7 +10,7 @@ export default function DashboardLayout({
 }) {
   return (
     <ToastProvider>
-      <div className="min-h-screen bg-vdSurface">
+      <div className="min-h-screen bg-airSurface">
         <main className="min-h-screen pb-24">{children}</main>
         <BottomNav />
       </div>
