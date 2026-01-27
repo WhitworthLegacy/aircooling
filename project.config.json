@@ -1,0 +1,38 @@
+{
+  "name": "aircooling",
+  "display_name": "Aircooling",
+  "features": [
+    "booking",
+    "quotes",
+    "blog",
+    "crm",
+    "notifications",
+    "analytics"
+  ],
+  "branding": {
+    "primary": "#1B3B8A",
+    "accent": "#CC0A0A",
+    "dark": "#1A1A2E",
+    "font_heading": "Montserrat",
+    "font_body": "Inter"
+  },
+  "seo": {
+    "target_keywords": [
+      "climatisation Belgique",
+      "installation climatisation",
+      "entretien HVAC",
+      "chauffage Belgique",
+      "réfrigération professionnelle"
+    ],
+    "location_keywords": [
+      "Bruxelles",
+      "Forest",
+      "Uccle",
+      "Ixelles",
+      "Wallonie",
+      "Flandre"
+    ]
+  },
+  "created_at": "2026-01-27T10:56:46.626902",
+  "template_version": "1.0.0"
+}

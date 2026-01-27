@@ -1,0 +1,175 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   Poppins Font - VeloDoctor Brand Typography
+   ============================================ */
+
+@font-face {
+  font-family: "Poppins";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/poppins-latin-400-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Poppins";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/poppins-latin-500-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Poppins";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/poppins-latin-600-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Poppins";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/poppins-latin-700-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Poppins";
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("/fonts/poppins-latin-800-normal.woff2") format("woff2");
+}
+
+/* ============================================
+   VeloDoctor Design System - Admin
+   CSS Variables + Base Styles
+   ============================================ */
+
+:root {
+  /* Brand Colors - USE SPARINGLY AS ACCENTS */
+  --vd-primary: #00ACC2;    /* Moonstone (blue) - accents only */
+  --vd-accent: #FF6D00;     /* Pumpkin (orange) - CTAs only */
+  --vd-dark: #293133;       /* Gunmetal - primary text */
+  --vd-muted: #6B7280;      /* Gray-500 - secondary text */
+  --vd-surface: #F7FAFB;    /* Very light gray - subtle bg */
+  --vd-border: #E5E7EB;     /* Gray-200 - borders */
+  --vd-white: #FFFFFF;      /* Pure white - main bg */
+
+  /* Font */
+  --font-poppins: "Poppins", "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Base Styles */
+body {
+  font-family: var(--font-poppins), -apple-system, sans-serif;
+  background: var(--vd-surface);
+  color: var(--vd-dark);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Typography Hierarchy */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--vd-dark);
+  letter-spacing: -0.025em;
+}
+
+h1 {
+  font-size: 2.5rem;
+  font-weight: 800;
+}
+
+h2 {
+  font-size: 1.875rem;
+  font-weight: 700;
+}
+
+h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+@media (min-width: 768px) {
+  h1 {
+    font-size: 3rem;
+  }
+  h2 {
+    font-size: 2.25rem;
+  }
+  h3 {
+    font-size: 1.75rem;
+  }
+}
+
+/* Paragraphs - HIGH CONTRAST */
+p {
+  line-height: 1.7;
+  color: rgb(55, 65, 81);
+}
+
+/* Accent Underline Helper - Gradient */
+.accent-underline {
+  position: relative;
+  display: inline-block;
+}
+
+.accent-underline::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--vd-accent), var(--vd-primary));
+  border-radius: 2px;
+}
+
+.accent-underline-thin::after {
+  height: 2px;
+  bottom: -2px;
+}
+
+/* Focus States */
+*:focus-visible {
+  outline: 2px solid var(--vd-primary);
+  outline-offset: 2px;
+  border-radius: 0.375rem;
+}
+
+/* Selection */
+::selection {
+  background-color: var(--vd-accent);
+  color: white;
+}
+
+::-moz-selection {
+  background-color: var(--vd-accent);
+  color: white;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--vd-surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--vd-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--vd-muted);
+}

@@ -1,0 +1,17 @@
+{
+  "name": "aircooling",
+  "private": true,
+  "scripts": {
+    "dev": "turbo dev",
+    "dev:web": "turbo dev --filter=web",
+    "dev:admin": "turbo dev --filter=admin",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "db:migrate": "supabase db push",
+    "db:reset": "supabase db reset"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0"
+  },
+  "packageManager": "pnpm@9.0.0"
+}
