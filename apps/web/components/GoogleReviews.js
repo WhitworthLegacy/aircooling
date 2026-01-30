@@ -22,11 +22,12 @@ export default function GoogleReviews() {
         const response = await fetch('/api/google-reviews', {
           signal: controller.signal,
         });
-        const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(data?.error || 'Failed to fetch reviews');
+          throw new Error(`HTTP ${response.status}`);
         }
+
+        const data = await response.json();
 
         if (isActive && Array.isArray(data.reviews) && data.reviews.length > 0) {
           setReviews(data.reviews);

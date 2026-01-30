@@ -22,6 +22,12 @@ export const STATUS_LABELS: Record<string, string> = {
   completed: "Terminé",
   cancelled: "Annulé",
   in_progress: "En cours",
+  in_transit: "En route",
+  done: "Terminé",
+  sent: "Envoyé",
+  accepted: "Accepté",
+  rejected: "Refusé",
+  refused: "Refusé",
 };
 
 export const STATUS_COLORS: Record<string, string> = {
@@ -30,6 +36,12 @@ export const STATUS_COLORS: Record<string, string> = {
   completed: "bg-green-100 text-green-800",
   cancelled: "bg-red-100 text-red-800",
   in_progress: "bg-purple-100 text-purple-800",
+  in_transit: "bg-indigo-100 text-indigo-800",
+  done: "bg-green-100 text-green-800",
+  sent: "bg-sky-100 text-sky-800",
+  accepted: "bg-emerald-100 text-emerald-800",
+  rejected: "bg-red-100 text-red-800",
+  refused: "bg-red-100 text-red-800",
 };
 
 // HVAC service types

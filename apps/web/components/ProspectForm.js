@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 const TYPES_DEMANDE = [
   "Climatisation",
@@ -23,6 +24,7 @@ const STEPS = [
 ];
 
 export default function ProspectForm() {
+  const router = useRouter();
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -119,7 +121,12 @@ export default function ProspectForm() {
         return;
       }
 
-      setSuccess(true);
+      // Redirect to plan drawing page with prospect_id
+      if (data.data?.prospect_id) {
+        router.push(`/devis/plan?prospectId=${data.data.prospect_id}`);
+      } else {
+        setSuccess(true);
+      }
     } catch {
       setError("Erreur de connexion. Veuillez réessayer.");
     } finally {

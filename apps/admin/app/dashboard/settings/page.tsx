@@ -241,32 +241,11 @@ export default function SettingsPage() {
               <h2 className="text-lg font-semibold text-airDark">Authentification</h2>
             </div>
             <p className="text-sm text-airMuted">
-              Les sessions sont gérées par Supabase. Vérifiez les clés dans les variables d&apos;environnement (`NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`).
+              Les sessions sont gérées par Supabase. Vérifiez les clés dans les variables d&apos;environnement.
             </p>
             <div className="flex flex-wrap gap-3">
               <Button variant="ghost" size="sm" href="/login">
                 Gérer les sessions
-              </Button>
-              <Button variant="secondary" size="sm">
-                Réinitialiser les jetons
-              </Button>
-            </div>
-          </Card>
-
-          <Card className="p-6 space-y-4">
-            <div className="flex items-center gap-3">
-              <SettingsIcon className="w-5 h-5 text-airPrimary" />
-              <h2 className="text-lg font-semibold text-airDark">Infra & notifications</h2>
-            </div>
-            <p className="text-sm text-airMuted">
-              Ajoutez ici vos règles de réservation, vos webhooks (Stripe, Resend) et vos préférences de vérification.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <Button variant="ghost" size="sm">
-                Voir Webhooks
-              </Button>
-              <Button variant="ghost" size="sm">
-                Voir logs
               </Button>
             </div>
           </Card>

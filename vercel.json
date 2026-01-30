@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/nurturing-emails",
+      "schedule": "0 9,14,18 * * *"
+    }
+  ]
+}

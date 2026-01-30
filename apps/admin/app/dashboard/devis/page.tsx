@@ -197,10 +197,7 @@ export default function DevisPage() {
       const response = await apiFetch("/api/admin/emails/resend-quote", {
         method: "POST",
         body: JSON.stringify({
-          quoteId: selectedQuote.id,
-          clientEmail: selectedQuote.clients.email,
-          clientName: selectedQuote.clients.full_name,
-          totalAmount: selectedQuote.total,
+          quote_id: selectedQuote.id,
         }),
       }) as { ok?: boolean; error?: string };
 

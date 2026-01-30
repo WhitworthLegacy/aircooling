@@ -581,9 +581,11 @@ export default function ClientsPage() {
               <div className="border-t border-airBorder pt-4">
                 <p className="text-xs text-airMuted mb-2">QR Code suivi client</p>
                 <div className="flex items-center gap-4">
-                  <div className="w-20 h-20 bg-airSurface rounded-lg flex items-center justify-center text-xs text-airMuted border border-airBorder">
-                    QR
-                  </div>
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(`https://aircooling.be/suivi/${selectedClient.trackingId || selectedClient.id.slice(0, 8)}`)}`}
+                    alt="QR Code"
+                    className="w-20 h-20 rounded-lg border border-airBorder"
+                  />
                   <div className="flex-1">
                     <p className="text-xs text-airMuted">Lien de suivi:</p>
                     <p className="text-sm text-airDark font-mono break-all">

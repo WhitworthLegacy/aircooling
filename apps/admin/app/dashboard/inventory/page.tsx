@@ -178,16 +178,33 @@ export default function InventoryPage() {
                 variant="secondary"
                 size="sm"
                 icon={<ShoppingCart className="w-4 h-4" />}
-                onClick={() =>
-                  alert(
-                    `Commande générée pour :\n${lowStockItems
-                      .map((i) => `- ${i.name} (Reste: ${i.quantity})`)
-                      .join('\n')}`
-                  )
-                }
+                onClick={() => {
+                  // Generate CSV content
+                  const headers = ['Article', 'Référence', 'Fournisseur', 'Stock actuel', 'Seuil min', 'À commander'];
+                  const rows = lowStockItems.map((i) => [
+                    i.name,
+                    i.reference || '',
+                    i.supplier_name || '',
+                    String(i.quantity),
+                    String(i.min_threshold),
+                    String(Math.max(0, i.min_threshold * 2 - i.quantity)), // Suggest ordering 2x threshold - current
+                  ]);
+                  const csv = [headers.join(';'), ...rows.map((r) => r.join(';'))].join('\n');
+
+                  // Download CSV
+                  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+                  const url = URL.createObjectURL(blob);
+                  const link = document.createElement('a');
+                  link.href = url;
+                  link.download = `commande_stock_${new Date().toISOString().slice(0, 10)}.csv`;
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                  URL.revokeObjectURL(url);
+                }}
                 className="!bg-red-600 !text-white hover:!bg-red-700"
               >
-                Commander
+                Télécharger CSV
               </Button>
             </div>
           )}
@@ -314,6 +331,7 @@ function InventoryItemForm({
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClient, setSelectedClient] = useState('');
   const [technician, setTechnician] = useState('');
+  const [technicians, setTechnicians] = useState<Array<{ id: string; full_name: string }>>([]);
 
   const currentQty = item?.quantity ?? formData.quantity ?? 0;
   const coverImage = item?.products?.[0]?.cover_image_url;
@@ -321,6 +339,7 @@ function InventoryItemForm({
   useEffect(() => {
     if (item?.id && movementType === 'OUT') {
       loadClients();
+      loadTechnicians();
     }
   }, [item?.id, movementType]);
 
@@ -334,6 +353,21 @@ function InventoryItemForm({
       setClients(data || []);
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const loadTechnicians = async () => {
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { data } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('role', ['technicien', 'admin', 'super_admin'])
+        .eq('is_active', true)
+        .order('full_name');
+      setTechnicians(data || []);
+    } catch (err) {
+      console.error('[loadTechnicians] error:', err);
     }
   };
 
@@ -716,9 +750,7 @@ function InventoryItemForm({
                   onChange={(e) => setTechnician(e.target.value)}
                   options={[
                     { value: '', label: 'Sélectionner...' },
-                    { value: 'Marc', label: 'Marc' },
-                    { value: 'Jean', label: 'Jean' },
-                    { value: 'Sophie', label: 'Sophie' },
+                    ...technicians.map((t) => ({ value: t.full_name || t.id, label: t.full_name || 'Sans nom' })),
                   ]}
                 />
               </div>

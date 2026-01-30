@@ -6,6 +6,7 @@ import { requireAdmin } from "@/lib/adminAuth";
 import { generateProspectPdf } from "@/lib/pdf/prospect-pdf";
 import { generateProspectNotificationHtml } from "@/lib/pdf/prospect-email";
 import { resend, FROM_EMAIL, getBaseUrl } from "@/lib/resend";
+import { sendWelcomeEmail } from "@/lib/emails/nurturing";
 
 const ProspectSchema = z.object({
   type_client: z.enum(["Particulier", "Professionnel"]).default("Particulier"),
@@ -151,6 +152,22 @@ export async function POST(request: NextRequest) {
     } catch (emailError) {
       console.error("[prospects] Email notification error:", emailError);
       // Non-blocking: prospect is still created
+    }
+
+    // 4. 🔥 Send welcome email to prospect (NURTURING SEQUENCE START)
+    if (data.email) {
+      try {
+        await sendWelcomeEmail({
+          to: data.email,
+          prospectName: data.nom,
+          prospectId: prospect.id,
+          demandType: data.type_demande,
+        });
+        console.info(`[prospects] ✅ Welcome email sent to ${data.email} (nurturing T+0)`);
+      } catch (welcomeError) {
+        console.error("[prospects] Welcome email error:", welcomeError);
+        // Non-blocking
+      }
     }
 
     return jsonCreated({
