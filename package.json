@@ -1,6 +1,9 @@
 {
   "name": "aircooling",
   "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
   "scripts": {
     "dev": "turbo dev",
     "dev:web": "turbo dev --filter=web",
@@ -12,6 +15,5 @@
   },
   "devDependencies": {
     "turbo": "^2.0.0"
-  },
-  "packageManager": "pnpm@9.0.0"
+  }
 }
