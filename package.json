@@ -5,16 +5,15 @@
     "apps/*"
   ],
   "scripts": {
-    "dev": "turbo dev",
-    "dev:web": "turbo dev --filter=web",
-    "dev:admin": "turbo dev --filter=admin",
-    "build": "turbo build",
-    "lint": "turbo lint",
+    "dev": "npm run dev --workspaces --if-present",
+    "dev:web": "npm run dev -w apps/web",
+    "dev:admin": "npm run dev -w apps/admin",
+    "build": "npm run build --workspaces --if-present",
+    "build:web": "npm run build -w apps/web",
+    "build:admin": "npm run build -w apps/admin",
+    "lint": "npm run lint --workspaces --if-present",
     "db:migrate": "supabase db push",
     "db:reset": "supabase db reset"
-  },
-  "devDependencies": {
-    "turbo": "^2.0.0"
   },
   "packageManager": "npm@10.2.4"
 }
