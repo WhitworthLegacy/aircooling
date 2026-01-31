@@ -23,7 +23,6 @@ import { Badge, Button, Card, Input, Modal, Select, useToast } from '@/component
 import { PageContainer } from '@/components/layout';
 import { apiFetch } from '@/lib/apiClient';
 import { STATUS_LABELS, STATUS_COLORS } from '@/lib/constants';
-import { getSupabaseBrowserClient } from '@/lib/supabase';
 
 type Appointment = {
   id: string;
@@ -200,12 +199,25 @@ export default function AppointmentsPage() {
 
   const loadClients = async () => {
     try {
-      const supabase = getSupabaseBrowserClient();
-      const { data } = await supabase
-        .from('clients')
-        .select('id, first_name, last_name, phone, address')
-        .order('last_name');
-      setClients(data || []);
+      const payload = await apiFetch<{
+        success: boolean;
+        clients?: Array<{
+          id: string;
+          first_name?: string;
+          last_name?: string;
+          phone?: string;
+          address?: string;
+        }>;
+      }>('/api/clients?limit=500');
+
+      const rows = payload.clients || [];
+      setClients(rows.map(c => ({
+        id: c.id,
+        first_name: c.first_name,
+        last_name: c.last_name,
+        phone: c.phone,
+        address: c.address,
+      })));
     } catch (err) {
       console.error('[appointments] load clients failed', err);
     }
