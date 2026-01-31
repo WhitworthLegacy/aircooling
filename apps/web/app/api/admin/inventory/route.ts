@@ -31,15 +31,15 @@ export async function GET(request: NextRequest) {
     }
 
     if (category) {
-      query = query.ilike("supplier", `%${category}%`);
+      query = query.ilike("category", `%${category}%`);
     }
 
     if (search) {
-      query = query.or(`name.ilike.%${search}%,sku.ilike.%${search}%,description.ilike.%${search}%`);
+      query = query.or(`name.ilike.%${search}%,reference.ilike.%${search}%,description.ilike.%${search}%`);
     }
 
     if (inStock) {
-      query = query.or("track_stock.eq.false,stock_qty.gt.0");
+      query = query.gt("quantity", 0);
     }
 
     const { data: items, error } = await query;
@@ -49,18 +49,33 @@ export async function GET(request: NextRequest) {
       return jsonError("DATABASE_ERROR", "Erreur de récupération", requestId, 500);
     }
 
+    // Transform items to match frontend expected format
+    // Map database columns to frontend expected names
+    const transformedItems = (items || []).map(item => ({
+      id: item.id,
+      sku: item.reference, // Map reference -> sku for frontend
+      name: item.name,
+      description: item.description,
+      item_type: item.item_type || 'part',
+      sell_price: item.price_sell || 0,
+      cost_price: item.price_buy || 0,
+      stock_qty: item.quantity || 0,
+      category: item.category,
+      supplier: item.supplier_name,
+    }));
+
     // Group items by type for easier use in frontend
     const grouped = {
-      labor: items?.filter(i => i.item_type === "labor") || [],
-      parts: items?.filter(i => i.item_type === "part") || [],
-      fees: items?.filter(i => i.item_type === "fee") || [],
-      services: items?.filter(i => i.item_type === "service") || [],
+      labor: transformedItems.filter(i => i.item_type === "labor"),
+      parts: transformedItems.filter(i => i.item_type === "part"),
+      fees: transformedItems.filter(i => i.item_type === "fee"),
+      services: transformedItems.filter(i => i.item_type === "service"),
     };
 
     return jsonOk({
-      items: items || [],
+      items: transformedItems,
       grouped,
-      total: items?.length || 0
+      total: transformedItems.length
     });
   } catch (error) {
     console.error(`[admin/inventory] requestId=${requestId}`, error);
