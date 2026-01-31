@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Loader2,
+  Camera,
   Clock,
   Plus,
   X,
@@ -11,21 +12,31 @@ import {
   Mail,
   FileText,
   Edit3,
+  ExternalLink,
   User,
   MessageSquare,
   Navigation,
   QrCode,
+  Expand,
   Send,
+  CreditCard,
+  Banknote,
+  CheckCircle2,
+  Euro,
+  History,
   Calendar,
   Save,
   Snowflake,
   CheckSquare,
   Square,
   ClipboardList,
+  Thermometer,
+  Wind,
 } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import { Badge, Button, Input, Select, useToast } from '@/components/ui';
 import { apiFetch } from '@/lib/apiClient';
+import { getSupabaseBrowserClient } from '@/lib/supabase';
 import { CrmClient, CrmColumn } from './types';
 import { STATUS_LABELS, CRM_STAGES } from '@/lib/constants';
 import { ChecklistGroup, HVAC_DIAGNOSTIC_CHECKLIST, HVAC_ENTRETIEN_CHECKLIST } from '@/lib/checklists';
@@ -101,6 +112,22 @@ export default function CrmCardModal({
   const [noteDraft, setNoteDraft] = useState('');
   const [localNotes, setLocalNotes] = useState('');
 
+  // Photos state
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [photosLoading, setPhotosLoading] = useState(false);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Workflow state (includes payment info)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [workflowState, setWorkflowState] = useState<Record<string, any>>({});
+
+  // Payment state
+  const [isPaid, setIsPaid] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<string>('');
+  const [paymentSaving, setPaymentSaving] = useState(false);
+
   // Client edit mode
   const [editMode, setEditMode] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -124,6 +151,10 @@ export default function CrmCardModal({
   });
   const [appointmentSaving, setAppointmentSaving] = useState(false);
 
+  // Appointment detail modal
+  const [selectedAppointment, setSelectedAppointment] = useState<ClientAppointment | null>(null);
+  const [appointmentDetailOpen, setAppointmentDetailOpen] = useState(false);
+
   // Quote creation
   const [quoteSaving, setQuoteSaving] = useState(false);
   const [showQuoteForm, setShowQuoteForm] = useState(false);
@@ -132,6 +163,9 @@ export default function CrmCardModal({
 
   // QR code modal
   const [showQRCode, setShowQRCode] = useState(false);
+
+  // Timeline email
+  const [timelineSending, setTimelineSending] = useState(false);
 
   // Checklist state
   const [activeTab, setActiveTab] = useState<'info' | 'checklist'>('info');
@@ -177,6 +211,44 @@ export default function CrmCardModal({
     }
   }, [client?.checklists]);
 
+  // Initialize workflow state
+  useEffect(() => {
+    if (client) {
+      const ws = client.workflow_state || {};
+      setWorkflowState(ws);
+      setIsPaid(ws.is_paid || false);
+      setPaymentMethod(ws.payment_method || '');
+    }
+  }, [client]);
+
+  const fetchPhotos = useCallback(async () => {
+    if (!client?.id) return;
+    setPhotosLoading(true);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { data: files } = await supabase.storage
+        .from('photos')
+        .list(`clients/${client.id}`, { limit: 20 });
+
+      if (files && files.length > 0) {
+        const urls = files.map((file) => {
+          const { data } = supabase.storage
+            .from('photos')
+            .getPublicUrl(`clients/${client.id}/${file.name}`);
+          return data.publicUrl;
+        });
+        setPhotos(urls);
+      } else {
+        setPhotos([]);
+      }
+    } catch (error) {
+      console.error('[CRM] failed to fetch photos', error);
+      setPhotos([]);
+    } finally {
+      setPhotosLoading(false);
+    }
+  }, [client?.id]);
+
   const fetchAppointments = useCallback(async () => {
     if (!client?.id) return;
     setAppointmentsLoading(true);
@@ -221,8 +293,9 @@ export default function CrmCardModal({
       postalCode: client.postalCode || '',
       systemType: client.systemType || '',
     });
+    fetchPhotos();
     fetchAppointments();
-  }, [client, fetchAppointments]);
+  }, [client, fetchPhotos, fetchAppointments]);
 
   const handleAddNote = async () => {
     if (!client || !noteDraft.trim()) return;
@@ -321,6 +394,30 @@ export default function CrmCardModal({
     }
   };
 
+  const openAppointmentDetail = (appt: ClientAppointment) => {
+    setSelectedAppointment(appt);
+    setAppointmentDetailOpen(true);
+  };
+
+  const handleUpdateAppointmentStatus = async (status: string) => {
+    if (!selectedAppointment?.id) return;
+    try {
+      await apiFetch('/api/appointments', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          id: selectedAppointment.id,
+          status,
+        }),
+      });
+      toast.addToast('Statut mis à jour', 'success');
+      setAppointmentDetailOpen(false);
+      fetchAppointments();
+    } catch (error) {
+      console.error('[CRM] failed to update appointment', error);
+      toast.addToast("Erreur mise à jour", 'error');
+    }
+  };
+
   const handleCreateQuote = async () => {
     if (!client?.id) return;
     if (!quoteDescription.trim() || !quoteAmount) {
@@ -330,7 +427,6 @@ export default function CrmCardModal({
 
     setQuoteSaving(true);
     try {
-      // Use the API which requires items array
       const response = await apiFetch<{ success: boolean; quote?: { quote_number: string } }>('/api/admin/quotes', {
         method: 'POST',
         body: JSON.stringify({
@@ -363,13 +459,101 @@ export default function CrmCardModal({
     }
   };
 
+  // Handle payment status change
+  const handlePaymentChange = async (paid: boolean, method?: string) => {
+    if (!client?.id) return;
+    setPaymentSaving(true);
+    try {
+      const newWorkflowState = {
+        ...workflowState,
+        is_paid: paid,
+        payment_method: method || paymentMethod,
+        paid_at: paid ? new Date().toISOString() : null,
+      };
+
+      await apiFetch(`/api/clients/${client.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          workflow_state: newWorkflowState,
+          // If paid and not in terminé stage, move to terminé
+          ...(paid && client.stage !== 'terminé' ? { crm_stage: 'terminé' } : {}),
+        }),
+      });
+
+      setIsPaid(paid);
+      if (method) setPaymentMethod(method);
+      setWorkflowState(newWorkflowState);
+      toast.addToast(paid ? 'Paiement enregistré' : 'Paiement annulé', 'success');
+
+      if (onClientUpdate) {
+        await onClientUpdate();
+      }
+    } catch (error) {
+      console.error('[CRM] failed to save payment', error);
+      toast.addToast("Erreur lors de l'enregistrement", 'error');
+    } finally {
+      setPaymentSaving(false);
+    }
+  };
+
+  // Photo upload handler
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !client?.id) return;
+
+    setPhotoUploading(true);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}.${fileExt}`;
+      const filePath = `clients/${client.id}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('photos')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      toast.addToast('Photo ajoutée', 'success');
+      fetchPhotos();
+    } catch (error) {
+      console.error('[CRM] failed to upload photo', error);
+      toast.addToast("Erreur upload photo", 'error');
+    } finally {
+      setPhotoUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  // Send timeline recap email
+  const handleSendTimeline = async () => {
+    if (!client?.id || !client?.email) return;
+    setTimelineSending(true);
+    try {
+      const response = await apiFetch<{ ok: boolean; data?: { sentTo: string } }>('/api/admin/emails/send-timeline', {
+        method: 'POST',
+        body: JSON.stringify({ clientId: client.id }),
+      });
+
+      if (response.ok) {
+        toast.addToast(`Récapitulatif envoyé à ${response.data?.sentTo || client.email}`, 'success');
+      }
+    } catch (error) {
+      console.error('[CRM] failed to send timeline email', error);
+      toast.addToast("Erreur lors de l'envoi", 'error');
+    } finally {
+      setTimelineSending(false);
+    }
+  };
+
   // Get current checklist based on type
   const getCurrentChecklist = (): ChecklistGroup[] => {
     const key = checklistType;
     if (localChecklists[key]) {
       return localChecklists[key];
     }
-    // Return default checklist
     return checklistType === 'diagnostic' ? HVAC_DIAGNOSTIC_CHECKLIST : HVAC_ENTRETIEN_CHECKLIST;
   };
 
@@ -481,7 +665,7 @@ export default function CrmCardModal({
 
   return (
     <>
-      <Modal isOpen={open} onClose={onClose} title={`${trackingId} — ${client.name}`} size="3xl">
+      <Modal isOpen={open} onClose={onClose} title={`${trackingId} — ${client.name}`} size="5xl">
         <div className="space-y-4">
           {/* Quick Actions Bar */}
           <div className="flex items-center justify-between gap-3 p-3 bg-gradient-to-r from-airSurface to-white rounded-xl border border-airBorder">
@@ -492,6 +676,11 @@ export default function CrmCardModal({
               <Badge size="md" className={getStageColor(client.stage)}>
                 {STATUS_LABELS[client.stage || ''] || client.stage}
               </Badge>
+              {client.systemType && (
+                <Badge size="md" variant="accent" className="flex items-center gap-1">
+                  <Wind className="w-3 h-3" /> {client.systemType}
+                </Badge>
+              )}
             </div>
 
             {/* Quick action buttons */}
@@ -582,307 +771,439 @@ export default function CrmCardModal({
               <div className="md:col-span-2 space-y-4">
                 {/* Client Profile Card */}
                 <section className="bg-white rounded-2xl border border-airBorder p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold text-airDark flex items-center gap-2">
-                    <User className="w-4 h-4" /> Informations client
-                  </p>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    icon={<Edit3 className="w-4 h-4" />}
-                    onClick={() => setEditMode(!editMode)}
-                  >
-                    {editMode ? 'Annuler' : 'Modifier'}
-                  </Button>
-                </div>
-
-                {editMode ? (
-                  <div className="space-y-3">
-                    <Input
-                      label="Nom"
-                      value={editForm.name}
-                      onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                    />
-                    <div className="grid grid-cols-2 gap-3">
-                      <Input
-                        label="Téléphone"
-                        value={editForm.phone}
-                        onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                      />
-                      <Input
-                        label="Email"
-                        value={editForm.email}
-                        onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                      />
-                    </div>
-                    <Input
-                      label="Adresse"
-                      value={editForm.address}
-                      onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
-                    />
-                    <div className="grid grid-cols-2 gap-3">
-                      <Input
-                        label="Ville"
-                        value={editForm.city}
-                        onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
-                      />
-                      <Input
-                        label="Code postal"
-                        value={editForm.postalCode}
-                        onChange={(e) => setEditForm({ ...editForm, postalCode: e.target.value })}
-                      />
-                    </div>
-                    <Select
-                      label="Type de système"
-                      value={editForm.systemType}
-                      onChange={(e) => setEditForm({ ...editForm, systemType: e.target.value })}
-                      options={SYSTEM_TYPES}
-                    />
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold text-airDark flex items-center gap-2">
+                      <User className="w-4 h-4" /> Informations client
+                    </p>
                     <Button
-                      variant="primary"
-                      onClick={handleSaveClientInfo}
-                      loading={editSaving}
-                      icon={<Save className="w-4 h-4" />}
+                      variant="ghost"
+                      size="sm"
+                      icon={<Edit3 className="w-4 h-4" />}
+                      onClick={() => setEditMode(!editMode)}
                     >
-                      Sauvegarder
+                      {editMode ? 'Annuler' : 'Modifier'}
                     </Button>
                   </div>
-                ) : (
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div className="space-y-2 text-sm">
-                      <h3 className="text-lg font-bold text-airDark">{client.name}</h3>
-                      <div className="flex items-center gap-2">
-                        <Phone className="w-4 h-4 text-airMuted" />
-                        <a href={`tel:${client.phone}`} className="text-airPrimary font-medium">{client.phone || '—'}</a>
+
+                  {editMode ? (
+                    <div className="space-y-3">
+                      <Input
+                        label="Nom"
+                        value={editForm.name}
+                        onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                      />
+                      <div className="grid grid-cols-2 gap-3">
+                        <Input
+                          label="Téléphone"
+                          value={editForm.phone}
+                          onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                        />
+                        <Input
+                          label="Email"
+                          value={editForm.email}
+                          onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                        />
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Mail className="w-4 h-4 text-airMuted" />
-                        <span className="text-xs">{client.email || '—'}</span>
+                      <Input
+                        label="Adresse"
+                        value={editForm.address}
+                        onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                      />
+                      <div className="grid grid-cols-2 gap-3">
+                        <Input
+                          label="Ville"
+                          value={editForm.city}
+                          onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
+                        />
+                        <Input
+                          label="Code postal"
+                          value={editForm.postalCode}
+                          onChange={(e) => setEditForm({ ...editForm, postalCode: e.target.value })}
+                        />
                       </div>
+                      <Select
+                        label="Type de système"
+                        value={editForm.systemType}
+                        onChange={(e) => setEditForm({ ...editForm, systemType: e.target.value })}
+                        options={SYSTEM_TYPES}
+                      />
+                      <Button
+                        variant="primary"
+                        onClick={handleSaveClientInfo}
+                        loading={editSaving}
+                        icon={<Save className="w-4 h-4" />}
+                      >
+                        Sauvegarder
+                      </Button>
                     </div>
-                    <div className="space-y-2 text-sm">
-                      {clientAddress && (
-                        <div className="flex items-start gap-2">
-                          <MapPin className="w-4 h-4 text-airMuted flex-shrink-0 mt-0.5" />
-                          <div>
-                            <p className="text-airDark">{clientAddress}</p>
-                            <div className="flex gap-2 mt-1">
-                              <button
-                                onClick={() => openGPS(clientAddress, 'waze')}
-                                className="text-xs text-blue-600 hover:underline"
-                              >
-                                Waze
-                              </button>
-                              <button
-                                onClick={() => openGPS(clientAddress, 'google')}
-                                className="text-xs text-blue-600 hover:underline"
-                              >
-                                Google Maps
-                              </button>
+                  ) : (
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-2 text-sm">
+                        <h3 className="text-lg font-bold text-airDark">{client.name}</h3>
+                        <div className="flex items-center gap-2">
+                          <Phone className="w-4 h-4 text-airMuted" />
+                          <a href={`tel:${client.phone}`} className="text-airPrimary font-medium">{client.phone || '—'}</a>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Mail className="w-4 h-4 text-airMuted" />
+                          <span className="text-xs">{client.email || '—'}</span>
+                        </div>
+                      </div>
+                      <div className="space-y-2 text-sm">
+                        {clientAddress && (
+                          <div className="flex items-start gap-2">
+                            <MapPin className="w-4 h-4 text-airMuted flex-shrink-0 mt-0.5" />
+                            <div>
+                              <p className="text-airDark">{clientAddress}</p>
+                              <div className="flex gap-2 mt-1">
+                                <button
+                                  onClick={() => openGPS(clientAddress, 'waze')}
+                                  className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                                >
+                                  <ExternalLink className="w-3 h-3" /> Waze
+                                </button>
+                                <button
+                                  onClick={() => openGPS(clientAddress, 'google')}
+                                  className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                                >
+                                  <ExternalLink className="w-3 h-3" /> Google Maps
+                                </button>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      )}
-                      {client.systemType && (
-                        <Badge size="sm" variant="accent">{client.systemType}</Badge>
-                      )}
+                        )}
+                        {client.systemType && (
+                          <div className="flex items-center gap-2">
+                            <Thermometer className="w-4 h-4 text-airMuted" />
+                            <Badge size="sm" variant="accent">{client.systemType}</Badge>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </section>
-
-              {/* Notes */}
-              <section className="bg-white rounded-2xl border border-airBorder p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold text-airDark">Notes & Commentaires</p>
-                  <Badge size="sm">{noteLines.length}</Badge>
-                </div>
-                <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                  {noteLines.length === 0 && (
-                    <p className="text-sm text-airMuted">Aucune note</p>
                   )}
-                  {noteLines.map((note, index) => (
-                    <div key={index} className="rounded-lg border border-airBorder/60 bg-airSurface/30 px-3 py-2 text-sm text-airDark">
-                      {note}
-                    </div>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <input
-                    value={noteDraft}
-                    onChange={(e) => setNoteDraft(e.target.value)}
-                    placeholder="Ajouter une note..."
-                    className="flex-1 rounded-xl border border-airBorder px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-airPrimary"
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddNote()}
-                  />
-                  <Button variant="primary" size="sm" onClick={handleAddNote} disabled={!noteDraft.trim()}>
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                </div>
-              </section>
-            </div>
+                </section>
 
-            {/* Right column (1/3) */}
-            <div className="space-y-4">
-              {/* Appointments */}
-              <section className="bg-white rounded-2xl border border-airBorder p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold text-airDark flex items-center gap-2">
-                    <Calendar className="w-4 h-4" /> Rendez-vous
-                  </p>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    icon={showAppointmentForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                    onClick={() => setShowAppointmentForm(!showAppointmentForm)}
-                  />
-                </div>
-
-                {showAppointmentForm && (
-                  <div className="p-3 bg-airSurface/50 rounded-xl space-y-3">
-                    <Select
-                      label="Type"
-                      value={appointmentForm.service_type}
-                      onChange={(e) => setAppointmentForm({ ...appointmentForm, service_type: e.target.value })}
-                      options={SERVICE_OPTIONS}
-                    />
-                    <div className="grid grid-cols-2 gap-2">
-                      <Input
-                        label="Date"
-                        type="date"
-                        value={appointmentForm.scheduled_at}
-                        onChange={(e) => setAppointmentForm({ ...appointmentForm, scheduled_at: e.target.value })}
-                      />
-                      <Select
-                        label="Heure"
-                        value={appointmentForm.slot}
-                        onChange={(e) => setAppointmentForm({ ...appointmentForm, slot: e.target.value })}
-                        options={SLOT_OPTIONS}
-                      />
-                    </div>
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={handleCreateAppointment}
-                      loading={appointmentSaving}
-                      disabled={!appointmentForm.scheduled_at}
-                      className="w-full"
-                    >
-                      Créer RDV
-                    </Button>
+                {/* Notes */}
+                <section className="bg-white rounded-2xl border border-airBorder p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold text-airDark">Notes & Commentaires</p>
+                    <Badge size="sm">{noteLines.length}</Badge>
                   </div>
-                )}
-
-                {appointmentsLoading && <Loader2 className="w-4 h-4 animate-spin text-airMuted" />}
-
-                {!appointmentsLoading && appointments.length === 0 && !showAppointmentForm && (
-                  <p className="text-sm text-airMuted">Aucun rendez-vous</p>
-                )}
-
-                {!appointmentsLoading && appointments.length > 0 && (
-                  <div className="space-y-2 max-h-[150px] overflow-y-auto">
-                    {appointments.map((appt) => (
-                      <div
-                        key={appt.id}
-                        className="flex items-center justify-between gap-2 rounded-xl border border-airBorder/50 px-3 py-2"
-                      >
-                        <div>
-                          <p className="text-sm font-semibold text-airDark">{appt.service_type}</p>
-                          <p className="text-xs text-airMuted flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            {appt.date || appt.scheduled_at?.split('T')[0]} {appt.slot}
-                          </p>
-                        </div>
-                        <Badge size="sm" className={getStatusColor(appt.status)}>
-                          {STATUS_LABELS[appt.status || ''] || appt.status}
-                        </Badge>
+                  <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                    {noteLines.length === 0 && (
+                      <p className="text-sm text-airMuted">Aucune note</p>
+                    )}
+                    {noteLines.map((note, index) => (
+                      <div key={index} className="rounded-lg border border-airBorder/60 bg-airSurface/30 px-3 py-2 text-sm text-airDark">
+                        {note}
                       </div>
                     ))}
                   </div>
-                )}
-              </section>
-
-              {/* Actions */}
-              <section className="bg-white rounded-2xl border border-airBorder p-4 space-y-3">
-                <p className="text-sm font-semibold text-airDark flex items-center gap-2">
-                  <FileText className="w-4 h-4" /> Actions
-                </p>
-
-                {showQuoteForm ? (
-                  <div className="space-y-3 p-3 bg-airSurface/50 rounded-xl">
-                    <Input
-                      label="Description"
-                      value={quoteDescription}
-                      onChange={(e) => setQuoteDescription(e.target.value)}
-                      placeholder="Installation climatisation..."
+                  <div className="flex gap-2">
+                    <input
+                      value={noteDraft}
+                      onChange={(e) => setNoteDraft(e.target.value)}
+                      placeholder="Ajouter une note..."
+                      className="flex-1 rounded-xl border border-airBorder px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-airPrimary"
+                      onKeyDown={(e) => e.key === 'Enter' && handleAddNote()}
                     />
-                    <Input
-                      label="Montant (€)"
-                      type="number"
-                      value={quoteAmount}
-                      onChange={(e) => setQuoteAmount(e.target.value)}
-                      placeholder="1500"
+                    <Button variant="primary" size="sm" onClick={handleAddNote} disabled={!noteDraft.trim()}>
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </section>
+
+                {/* Photos */}
+                <section className="bg-white rounded-2xl border border-airBorder p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold text-airDark flex items-center gap-2">
+                      <Camera className="w-4 h-4" /> Photos
+                    </p>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={handlePhotoUpload}
+                      className="hidden"
                     />
-                    <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      icon={photoUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={photoUploading}
+                    >
+                      {photoUploading ? '...' : '+'}
+                    </Button>
+                  </div>
+                  {photosLoading && <Loader2 className="w-4 h-4 animate-spin text-airMuted" />}
+                  {!photosLoading && photos.length > 0 && (
+                    <div className="grid grid-cols-4 gap-2">
+                      {photos.map((url, i) => (
+                        <div
+                          key={i}
+                          className="relative group cursor-pointer"
+                          onClick={() => setLightboxPhoto(url)}
+                        >
+                          <img
+                            src={url}
+                            alt=""
+                            className="h-20 w-full object-cover rounded-lg border border-airBorder group-hover:opacity-80 transition"
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                            <Expand className="w-5 h-5 text-white drop-shadow-lg" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {!photosLoading && photos.length === 0 && (
+                    <p className="text-xs text-airMuted">Aucune photo - Cliquez + pour ajouter</p>
+                  )}
+                </section>
+              </div>
+
+              {/* Right column (1/3) */}
+              <div className="space-y-4">
+                {/* Appointments */}
+                <section className="bg-white rounded-2xl border border-airBorder p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold text-airDark flex items-center gap-2">
+                      <Calendar className="w-4 h-4" /> Rendez-vous
+                    </p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      icon={showAppointmentForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                      onClick={() => setShowAppointmentForm(!showAppointmentForm)}
+                    />
+                  </div>
+
+                  {showAppointmentForm && (
+                    <div className="p-3 bg-airSurface/50 rounded-xl space-y-3">
+                      <Select
+                        label="Type"
+                        value={appointmentForm.service_type}
+                        onChange={(e) => setAppointmentForm({ ...appointmentForm, service_type: e.target.value })}
+                        options={SERVICE_OPTIONS}
+                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <Input
+                          label="Date"
+                          type="date"
+                          value={appointmentForm.scheduled_at}
+                          onChange={(e) => setAppointmentForm({ ...appointmentForm, scheduled_at: e.target.value })}
+                        />
+                        <Select
+                          label="Heure"
+                          value={appointmentForm.slot}
+                          onChange={(e) => setAppointmentForm({ ...appointmentForm, slot: e.target.value })}
+                          options={SLOT_OPTIONS}
+                        />
+                      </div>
                       <Button
                         variant="primary"
                         size="sm"
-                        onClick={handleCreateQuote}
-                        loading={quoteSaving}
-                        className="flex-1"
+                        onClick={handleCreateAppointment}
+                        loading={appointmentSaving}
+                        disabled={!appointmentForm.scheduled_at}
+                        className="w-full"
                       >
-                        Créer
+                        Créer RDV
+                      </Button>
+                    </div>
+                  )}
+
+                  {appointmentsLoading && <Loader2 className="w-4 h-4 animate-spin text-airMuted" />}
+
+                  {!appointmentsLoading && appointments.length === 0 && !showAppointmentForm && (
+                    <p className="text-sm text-airMuted">Aucun rendez-vous</p>
+                  )}
+
+                  {!appointmentsLoading && appointments.length > 0 && (
+                    <div className="space-y-2 max-h-[150px] overflow-y-auto">
+                      {appointments.map((appt) => (
+                        <div
+                          key={appt.id}
+                          onClick={() => openAppointmentDetail(appt)}
+                          className="flex items-center justify-between gap-2 rounded-xl border border-airBorder/50 px-3 py-2 cursor-pointer hover:bg-airSurface/50 transition"
+                        >
+                          <div>
+                            <p className="text-sm font-semibold text-airDark">{appt.service_type}</p>
+                            <p className="text-xs text-airMuted flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {appt.date || appt.scheduled_at?.split('T')[0]} {appt.slot}
+                            </p>
+                          </div>
+                          <Badge size="sm" className={getStatusColor(appt.status)}>
+                            {STATUS_LABELS[appt.status || ''] || appt.status}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
+
+                {/* Payment Section */}
+                <section className="bg-white rounded-2xl border border-airBorder p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold text-airDark flex items-center gap-2">
+                      <Euro className="w-4 h-4" /> Paiement
+                    </p>
+                    {isPaid && (
+                      <Badge size="sm" variant="success" className="flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3" /> Payé
+                      </Badge>
+                    )}
+                  </div>
+
+                  <div className="space-y-3">
+                    <p className="text-xs text-airMuted">Mode de paiement :</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handlePaymentChange(true, 'cb')}
+                        disabled={paymentSaving}
+                        className={`flex items-center justify-center gap-2 p-3 rounded-xl border transition ${
+                          paymentMethod === 'cb'
+                            ? 'bg-blue-50 border-blue-400 text-blue-700'
+                            : 'border-airBorder hover:bg-airSurface text-airDark'
+                        }`}
+                      >
+                        <CreditCard className="w-5 h-5" />
+                        <span className="text-sm font-medium">CB</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handlePaymentChange(true, 'especes')}
+                        disabled={paymentSaving}
+                        className={`flex items-center justify-center gap-2 p-3 rounded-xl border transition ${
+                          paymentMethod === 'especes'
+                            ? 'bg-green-50 border-green-400 text-green-700'
+                            : 'border-airBorder hover:bg-airSurface text-airDark'
+                        }`}
+                      >
+                        <Banknote className="w-5 h-5" />
+                        <span className="text-sm font-medium">Espèces</span>
+                      </button>
+                    </div>
+
+                    {isPaid && workflowState.paid_at && (
+                      <p className="text-xs text-green-600 font-medium flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3" />
+                        Payé le {new Date(workflowState.paid_at).toLocaleDateString('fr-FR', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </p>
+                    )}
+
+                    {paymentSaving && (
+                      <div className="flex items-center gap-2 text-sm text-airMuted">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Enregistrement...
+                      </div>
+                    )}
+                  </div>
+                </section>
+
+                {/* Actions */}
+                <section className="bg-white rounded-2xl border border-airBorder p-4 space-y-3">
+                  <p className="text-sm font-semibold text-airDark flex items-center gap-2">
+                    <FileText className="w-4 h-4" /> Actions
+                  </p>
+
+                  {showQuoteForm ? (
+                    <div className="space-y-3 p-3 bg-airSurface/50 rounded-xl">
+                      <Input
+                        label="Description"
+                        value={quoteDescription}
+                        onChange={(e) => setQuoteDescription(e.target.value)}
+                        placeholder="Installation climatisation..."
+                      />
+                      <Input
+                        label="Montant (€)"
+                        type="number"
+                        value={quoteAmount}
+                        onChange={(e) => setQuoteAmount(e.target.value)}
+                        placeholder="1500"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={handleCreateQuote}
+                          loading={quoteSaving}
+                          className="flex-1"
+                        >
+                          Créer
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowQuoteForm(false)}
+                        >
+                          Annuler
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      icon={<FileText className="w-4 h-4" />}
+                      onClick={() => setShowQuoteForm(true)}
+                      className="w-full"
+                    >
+                      Créer un devis
+                    </Button>
+                  )}
+
+                  {client.email && (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        icon={<Send className="w-4 h-4" />}
+                        onClick={() => window.open(`mailto:${client.email}`, '_blank')}
+                        className="w-full"
+                      >
+                        Envoyer un email
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setShowQuoteForm(false)}
+                        icon={timelineSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <History className="w-4 h-4" />}
+                        onClick={handleSendTimeline}
+                        disabled={timelineSending}
+                        className="w-full"
                       >
-                        Annuler
+                        {timelineSending ? 'Envoi...' : 'Envoyer récapitulatif'}
                       </Button>
+                    </>
+                  )}
+                </section>
+
+                {/* QR Code Section */}
+                <section className="bg-airSurface/50 rounded-2xl border border-airBorder p-4">
+                  <div className="flex items-center gap-4">
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(clientUrl)}`}
+                      alt="QR Code"
+                      className="w-16 h-16 rounded-lg border border-airBorder"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-airMuted">Lien de suivi:</p>
+                      <p className="text-sm text-airDark font-mono truncate">{trackingId}</p>
                     </div>
                   </div>
-                ) : (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    icon={<FileText className="w-4 h-4" />}
-                    onClick={() => setShowQuoteForm(true)}
-                    className="w-full"
-                  >
-                    Créer un devis
-                  </Button>
-                )}
-
-                {client.email && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    icon={<Send className="w-4 h-4" />}
-                    onClick={() => window.open(`mailto:${client.email}`, '_blank')}
-                    className="w-full"
-                  >
-                    Envoyer un email
-                  </Button>
-                )}
-              </section>
-
-              {/* QR Code Section */}
-              <section className="bg-airSurface/50 rounded-2xl border border-airBorder p-4">
-                <div className="flex items-center gap-4">
-                  <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(clientUrl)}`}
-                    alt="QR Code"
-                    className="w-16 h-16 rounded-lg border border-airBorder"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-airMuted">Lien de suivi:</p>
-                    <p className="text-sm text-airDark font-mono truncate">{trackingId}</p>
-                  </div>
-                </div>
-              </section>
+                </section>
+              </div>
             </div>
-          </div>
           ) : (
             /* Checklist Tab Content */
             <div className="space-y-4">
@@ -896,6 +1217,7 @@ export default function CrmCardModal({
                       : 'bg-white text-airMuted border-airBorder hover:bg-airSurface'
                   }`}
                 >
+                  <Thermometer className="w-4 h-4 inline mr-2" />
                   Diagnostic
                 </button>
                 <button
@@ -906,6 +1228,7 @@ export default function CrmCardModal({
                       : 'bg-white text-airMuted border-airBorder hover:bg-airSurface'
                   }`}
                 >
+                  <Wind className="w-4 h-4 inline mr-2" />
                   Entretien annuel
                 </button>
               </div>
@@ -974,6 +1297,73 @@ export default function CrmCardModal({
         </div>
       </Modal>
 
+      {/* Appointment Detail Modal */}
+      <Modal
+        isOpen={appointmentDetailOpen}
+        onClose={() => setAppointmentDetailOpen(false)}
+        title="Détails du rendez-vous"
+      >
+        {selectedAppointment && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Badge className={getStatusColor(selectedAppointment.status)}>
+                {STATUS_LABELS[selectedAppointment.status || ''] || selectedAppointment.status}
+              </Badge>
+              <span className="text-sm text-airMuted">
+                {selectedAppointment.date || selectedAppointment.scheduled_at?.split('T')[0]} à {selectedAppointment.slot}
+              </span>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-lg font-semibold text-airDark">{selectedAppointment.service_type}</p>
+
+              {selectedAppointment.address && (
+                <div className="flex items-start gap-2 text-sm">
+                  <MapPin className="w-4 h-4 text-airMuted flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p>{selectedAppointment.address}</p>
+                    <div className="flex gap-2 mt-1">
+                      <button
+                        onClick={() => openGPS(selectedAppointment.address!, 'waze')}
+                        className="text-xs text-blue-600 hover:underline"
+                      >
+                        Waze
+                      </button>
+                      <button
+                        onClick={() => openGPS(selectedAppointment.address!, 'google')}
+                        className="text-xs text-blue-600 hover:underline"
+                      >
+                        Google Maps
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {selectedAppointment.notes && (
+                <div className="p-3 rounded-lg bg-airSurface text-sm">{selectedAppointment.notes}</div>
+              )}
+            </div>
+
+            <div className="border-t border-airBorder pt-4">
+              <p className="text-xs text-airMuted mb-2">Changer le statut :</p>
+              <div className="flex flex-wrap gap-2">
+                {['pending', 'confirmed', 'in_transit', 'done', 'cancelled'].map((s) => (
+                  <Button
+                    key={s}
+                    variant={selectedAppointment.status === s ? 'primary' : 'ghost'}
+                    size="sm"
+                    onClick={() => handleUpdateAppointmentStatus(s)}
+                  >
+                    {STATUS_LABELS[s] || s}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
+
       {/* QR Code Modal */}
       <Modal
         isOpen={showQRCode}
@@ -999,6 +1389,27 @@ export default function CrmCardModal({
           </p>
         </div>
       </Modal>
+
+      {/* Photo Lightbox */}
+      {lightboxPhoto && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setLightboxPhoto(null)}
+        >
+          <button
+            className="absolute top-4 right-4 p-2 rounded-full bg-white/20 text-white hover:bg-white/30 transition"
+            onClick={() => setLightboxPhoto(null)}
+          >
+            <X className="w-6 h-6" />
+          </button>
+          <img
+            src={lightboxPhoto}
+            alt="Photo agrandie"
+            className="max-w-full max-h-full object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </>
   );
 }
