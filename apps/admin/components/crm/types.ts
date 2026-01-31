@@ -12,7 +12,7 @@ export type CrmClient = {
   vehicleInfo?: string;
   stage: string;
   notes: string;
-  checklists?: Record<string, ChecklistGroup>;
+  checklists?: Record<string, ChecklistGroup[]>;
   systemType?: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   workflow_state?: Record<string, any>;
