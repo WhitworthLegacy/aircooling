@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Package,
   Plus,
@@ -11,8 +11,6 @@ import {
   ArrowUp,
   Trash2,
   Loader2,
-  Upload,
-  X,
 } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
 import { Badge, Button, Card, Input, Modal, Select } from '@/components/ui';
@@ -27,8 +25,6 @@ type InventoryItem = {
   min_threshold: number;
   price_buy?: number;
   price_sell?: number;
-  image_url?: string;
-  // Legacy: products relation (will be auto-synced via trigger)
   products?: Array<{ cover_image_url?: string; slug?: string }>;
 };
 
@@ -115,8 +111,6 @@ export default function InventoryPage() {
   );
 
   const getCoverImage = (item: InventoryItem) => {
-    // Priority: item.image_url > products[0].cover_image_url
-    if (item.image_url) return item.image_url;
     const product = Array.isArray(item.products) ? item.products[0] : undefined;
     return product?.cover_image_url || null;
   };
@@ -340,11 +334,7 @@ function InventoryItemForm({
   const [technicians, setTechnicians] = useState<Array<{ id: string; full_name: string }>>([]);
 
   const currentQty = item?.quantity ?? formData.quantity ?? 0;
-
-  // Image state - prioritize item.image_url over products
-  const [imageUrl, setImageUrl] = useState(item?.image_url || item?.products?.[0]?.cover_image_url || '');
-  const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const coverImage = item?.products?.[0]?.cover_image_url;
 
   useEffect(() => {
     if (item?.id && movementType === 'OUT') {
@@ -381,85 +371,6 @@ function InventoryItemForm({
     }
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      setError('Veuillez sélectionner une image');
-      return;
-    }
-
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      setError('Image trop volumineuse (max 5MB)');
-      return;
-    }
-
-    setUploading(true);
-    setError(null);
-
-    try {
-      const supabase = getSupabaseBrowserClient();
-
-      // Generate unique filename
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${item?.id || 'new'}-${Date.now()}.${fileExt}`;
-      const filePath = `inventory/${fileName}`;
-
-      // Upload to Supabase Storage (bucket: Pieces)
-      const { error: uploadError } = await supabase.storage
-        .from('Pieces')
-        .upload(filePath, file, { upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('Pieces')
-        .getPublicUrl(filePath);
-
-      setImageUrl(publicUrl);
-
-      // If editing existing item, update immediately
-      if (item?.id) {
-        const { error: updateError } = await supabase
-          .from('inventory_items')
-          .update({ image_url: publicUrl })
-          .eq('id', item.id);
-
-        if (updateError) throw updateError;
-      }
-    } catch (err) {
-      console.error('[handleImageUpload] error:', err);
-      setError('Erreur lors de l\'upload de l\'image');
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleRemoveImage = async () => {
-    if (!item?.id) {
-      setImageUrl('');
-      return;
-    }
-
-    try {
-      const supabase = getSupabaseBrowserClient();
-      const { error: updateError } = await supabase
-        .from('inventory_items')
-        .update({ image_url: null })
-        .eq('id', item.id);
-
-      if (updateError) throw updateError;
-      setImageUrl('');
-    } catch (err) {
-      console.error('[handleRemoveImage] error:', err);
-      setError('Erreur lors de la suppression de l\'image');
-    }
-  };
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -477,7 +388,6 @@ function InventoryItemForm({
       min_threshold: Number(formData.min_threshold ?? 0),
       price_buy: formData.price_buy === '' ? null : Number(formData.price_buy),
       price_sell: formData.price_sell === '' ? null : Number(formData.price_sell),
-      image_url: imageUrl || null,
     };
 
     try {
@@ -638,64 +548,18 @@ function InventoryItemForm({
   return (
     <div className="space-y-6">
       <div className="grid md:grid-cols-[200px_1fr] gap-6">
-        {/* Image with upload */}
+        {/* Image */}
         <div>
-          <div className="relative w-full aspect-square bg-airSurface rounded-2xl flex items-center justify-center overflow-hidden group">
-            {imageUrl ? (
-              <>
-                <img src={imageUrl} alt={item?.name || formData.name} className="w-full h-full object-cover" />
-                {/* Overlay with actions */}
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="p-2 bg-white rounded-full hover:bg-gray-100"
-                    title="Changer l'image"
-                  >
-                    <Upload className="w-5 h-5 text-airDark" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleRemoveImage}
-                    className="p-2 bg-white rounded-full hover:bg-gray-100"
-                    title="Supprimer l'image"
-                  >
-                    <X className="w-5 h-5 text-red-600" />
-                  </button>
-                </div>
-              </>
+          <div className="w-full aspect-square bg-airSurface rounded-2xl flex items-center justify-center overflow-hidden">
+            {coverImage ? (
+              <img src={coverImage} alt={item?.name} className="w-full h-full object-cover" />
             ) : (
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="flex flex-col items-center gap-2 p-4 hover:bg-airBorder/20 rounded-xl transition-colors w-full h-full justify-center"
-              >
-                {uploading ? (
-                  <Loader2 className="w-12 h-12 text-airPrimary animate-spin" />
-                ) : (
-                  <>
-                    <Upload className="w-12 h-12 text-airBorder" />
-                    <span className="text-xs text-airMuted">Ajouter une image</span>
-                  </>
-                )}
-              </button>
-            )}
-            {uploading && imageUrl && (
-              <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
-                <Loader2 className="w-8 h-8 text-airPrimary animate-spin" />
-              </div>
+              <Package className="w-16 h-16 text-airBorder" />
             )}
           </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleImageUpload}
-            className="hidden"
-          />
           {item?.products?.[0]?.slug && (
             <p className="text-xs text-airMuted mt-2 text-center">
-              Produit e-commerce: {item.products[0].slug}
+              Slug: {item.products[0].slug}
             </p>
           )}
         </div>
