@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from("quotes")
-      .select("*, clients(first_name, last_name, email), quote_items(*)", {
+      .select("*, clients(id, first_name, last_name, email, phone, tracking_id), quote_items(*)", {
         count: "exact",
       })
       .order("created_at", { ascending: false })

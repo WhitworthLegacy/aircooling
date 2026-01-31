@@ -38,7 +38,8 @@ type Quote = {
   client_id: string;
   clients?: {
     id: string;
-    full_name?: string;
+    first_name?: string;
+    last_name?: string;
     email?: string;
     phone?: string;
     tracking_id?: number;
@@ -83,7 +84,8 @@ export default function DevisPage() {
           *,
           clients (
             id,
-            full_name,
+            first_name,
+            last_name,
             email,
             phone,
             tracking_id
@@ -126,7 +128,7 @@ export default function DevisPage() {
       result = result.filter(
         (q) =>
           q.quote_number?.toLowerCase().includes(term) ||
-          q.clients?.full_name?.toLowerCase().includes(term) ||
+          `${q.clients?.first_name || ""} ${q.clients?.last_name || ""}`.toLowerCase().includes(term) ||
           q.clients?.email?.toLowerCase().includes(term) ||
           q.clients?.phone?.includes(term)
       );
@@ -385,7 +387,7 @@ export default function DevisPage() {
                           <div className="flex items-center gap-3 text-sm text-airMuted">
                             <span className="flex items-center gap-1">
                               <User className="w-3.5 h-3.5" />
-                              {quote.clients?.full_name || "Client inconnu"}
+                              {quote.clients?.first_name || quote.clients?.last_name ? `${quote.clients.first_name || ""} ${quote.clients.last_name || ""}`.trim() : "Client inconnu"}
                             </span>
                             {quote.clients?.tracking_id && (
                               <span className="text-xs bg-airSurface px-2 py-0.5 rounded">
@@ -500,7 +502,7 @@ export default function DevisPage() {
               <div className="grid md:grid-cols-2 gap-3 text-sm">
                 <div>
                   <p className="text-airMuted text-xs">Nom</p>
-                  <p className="font-medium text-airDark">{selectedQuote.clients?.full_name || "—"}</p>
+                  <p className="font-medium text-airDark">{selectedQuote.clients?.first_name || selectedQuote.clients?.last_name ? `${selectedQuote.clients.first_name || ""} ${selectedQuote.clients.last_name || ""}`.trim() : "—"}</p>
                 </div>
                 <div>
                   <p className="text-airMuted text-xs">N° Dossier</p>

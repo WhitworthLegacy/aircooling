@@ -19,7 +19,8 @@ type QuoteItem = {
 
 type QuoteClient = {
   id: string;
-  full_name: string;
+  first_name?: string;
+  last_name?: string;
   tracking_id?: number;
   phone?: string;
   email?: string;
@@ -165,7 +166,7 @@ export default function FinancesPage() {
         headers.join(';'),
         ...data.map((q) => [
           formatTrackingId(q.clients?.tracking_id, q.client_id),
-          q.clients?.full_name || q.client_name || '',
+          `${q.clients?.first_name || ""} ${q.clients?.last_name || ""}`.trim() || q.client_name || '',
           q.clients?.vehicle_info ? (VEHICLE_LABELS[q.clients.vehicle_info] || q.clients.vehicle_info) : '',
           getQuoteAmount(q).toFixed(2),
           q.status === 'accepted' ? 'Accepté' : (q.status === 'rejected' || q.status === 'refused') ? 'Refusé' : 'En attente',
@@ -290,7 +291,7 @@ export default function FinancesPage() {
                     <p className="p-4 text-sm text-airMuted text-center">Aucun devis ce mois</p>
                   ) : (
                     monthQuotes.map((quote) => {
-                      const clientName = quote.clients?.full_name || quote.client_name || 'Client';
+                      const clientName = `${quote.clients?.first_name || ""} ${quote.clients?.last_name || ""}`.trim() || quote.client_name || 'Client';
                       const trackingId = quote.clients?.tracking_id;
                       const vehicleInfo = quote.clients?.vehicle_info;
                       const amount = getQuoteAmount(quote);
@@ -379,7 +380,7 @@ export default function FinancesPage() {
                       N° {formatTrackingId(selectedQuote.clients.tracking_id, selectedQuote.client_id)}
                     </Badge>
                   </div>
-                  <p className="text-lg font-bold text-airDark">{selectedQuote.clients.full_name}</p>
+                  <p className="text-lg font-bold text-airDark">{`${selectedQuote.clients.first_name || ""} ${selectedQuote.clients.last_name || ""}`.trim() || "Client"}</p>
                   {selectedQuote.clients.phone && (
                     <div className="flex items-center gap-2 text-sm">
                       <Phone className="w-4 h-4 text-airMuted" />
