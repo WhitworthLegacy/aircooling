@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   Users,
+  UserPlus,
   Calendar,
   Kanban,
   Package,
@@ -33,6 +34,7 @@ const navItems: NavItem[] = [
   { label: 'Interventions', href: '/dashboard/interventions', icon: Wrench, roles: ['admin', 'super_admin'] },
   { label: 'Missions', href: '/dashboard/missions', icon: MapPin, roles: ['admin', 'super_admin'] },
   { label: 'CRM', href: '/dashboard/crm', icon: Kanban, roles: ['admin', 'super_admin'] },
+  { label: 'Prospects', href: '/dashboard/prospects', icon: UserPlus, roles: ['admin', 'super_admin'] },
   { label: 'Devis', href: '/dashboard/devis', icon: FileText, roles: ['admin', 'super_admin'] },
   { label: 'Clients', href: '/dashboard/clients', icon: Users, roles: ['admin', 'super_admin'] },
   { label: 'Messages', href: '/dashboard/conversations', icon: MessageSquare, roles: ['admin', 'super_admin'] },
