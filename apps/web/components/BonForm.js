@@ -55,6 +55,13 @@ export default function BonForm() {
     mode_paiement: "",
   });
 
+  // Inventory state for fournitures
+  const [inventoryItems, setInventoryItems] = useState([]);
+  const [selectedParts, setSelectedParts] = useState([]);
+  const [inventoryLoading, setInventoryLoading] = useState(false);
+  const [partsSearch, setPartsSearch] = useState("");
+  const [showPartsDropdown, setShowPartsDropdown] = useState(false);
+
   const set = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
     setError("");
@@ -71,6 +78,95 @@ export default function BonForm() {
       }));
     }
   };
+
+  // Fetch inventory items from API
+  const fetchInventory = async () => {
+    setInventoryLoading(true);
+    try {
+      const res = await fetch("/api/admin/inventory");
+      const data = await res.json();
+      if (data.items) {
+        setInventoryItems(data.items);
+      }
+    } catch (err) {
+      console.error("Failed to fetch inventory:", err);
+    } finally {
+      setInventoryLoading(false);
+    }
+  };
+
+  // Fetch inventory when reaching step 5 (Fournitures)
+  useEffect(() => {
+    if (step === 5 && inventoryItems.length === 0) {
+      fetchInventory();
+    }
+  }, [step, inventoryItems.length]);
+
+  // Toggle part selection
+  const handleTogglePart = (item) => {
+    const existing = selectedParts.find((p) => p.id === item.id);
+    if (existing) {
+      setSelectedParts(selectedParts.filter((p) => p.id !== item.id));
+    } else {
+      setSelectedParts([
+        ...selectedParts,
+        {
+          id: item.id,
+          sku: item.sku,
+          name: item.name,
+          quantity: 1,
+          unit_price: item.sell_price,
+        },
+      ]);
+    }
+  };
+
+  // Update part quantity
+  const handlePartQuantityChange = (partId, delta) => {
+    setSelectedParts(
+      selectedParts.map((p) => {
+        if (p.id === partId) {
+          const newQty = Math.max(1, p.quantity + delta);
+          return { ...p, quantity: newQty };
+        }
+        return p;
+      })
+    );
+  };
+
+  // Remove part
+  const handleRemovePart = (partId) => {
+    setSelectedParts(selectedParts.filter((p) => p.id !== partId));
+  };
+
+  // Filter inventory for search
+  const filteredInventory = inventoryItems
+    .filter((item) => item.item_type === "part")
+    .filter((item) => {
+      if (!partsSearch.trim()) return true;
+      const search = partsSearch.toLowerCase();
+      return (
+        item.name?.toLowerCase().includes(search) ||
+        item.sku?.toLowerCase().includes(search) ||
+        item.description?.toLowerCase().includes(search)
+      );
+    });
+
+  // Calculate parts total
+  const partsTotal = selectedParts.reduce(
+    (sum, p) => sum + p.quantity * p.unit_price,
+    0
+  );
+
+  // Update form.fournitures when selectedParts changes
+  useEffect(() => {
+    if (selectedParts.length > 0) {
+      const fournituresText = selectedParts
+        .map((p) => `${p.quantity}x ${p.name} (${p.unit_price.toFixed(2)}€)`)
+        .join("\n");
+      set("fournitures", fournituresText);
+    }
+  }, [selectedParts]);
 
   // Initialize signature pads when step 8 is reached
   useEffect(() => {
@@ -525,17 +621,175 @@ export default function BonForm() {
 
               {/* Step 5: Fournitures */}
               {step === 5 && (
-                <div>
+                <div className="space-y-4">
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Fournitures
+                    Pièces et matériel
                   </label>
-                  <textarea
-                    value={form.fournitures}
-                    onChange={(e) => set("fournitures", e.target.value)}
-                    placeholder="Fournitures utilisées (si applicable)"
-                    rows={6}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#1B3B8A] focus:border-transparent outline-none resize-none"
-                  />
+
+                  {/* Multi-select Dropdown */}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowPartsDropdown(!showPartsDropdown)}
+                      className="w-full flex items-center justify-between gap-2 border border-gray-300 rounded-xl px-4 py-3 bg-white hover:bg-gray-50 transition"
+                    >
+                      <span className="text-sm text-gray-500">
+                        {selectedParts.length > 0
+                          ? `${selectedParts.length} pièce${selectedParts.length > 1 ? "s" : ""} sélectionnée${selectedParts.length > 1 ? "s" : ""}`
+                          : "Sélectionner des pièces..."}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        {inventoryLoading && (
+                          <svg className="animate-spin h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                        )}
+                        <svg className={`w-4 h-4 text-gray-400 transition-transform ${showPartsDropdown ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                    </button>
+
+                    {/* Dropdown Panel */}
+                    {showPartsDropdown && (
+                      <div className="absolute z-20 mt-1 w-full bg-white border border-gray-300 rounded-xl shadow-lg">
+                        {/* Search */}
+                        <div className="p-2 border-b border-gray-200">
+                          <div className="flex items-center gap-2 bg-gray-100 rounded-lg px-3 py-2">
+                            <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            <input
+                              type="text"
+                              value={partsSearch}
+                              onChange={(e) => setPartsSearch(e.target.value)}
+                              placeholder="Rechercher..."
+                              className="flex-1 text-sm outline-none bg-transparent"
+                              autoFocus
+                            />
+                          </div>
+                        </div>
+
+                        {/* Options list */}
+                        <div className="max-h-64 overflow-y-auto">
+                          {filteredInventory.length === 0 ? (
+                            <p className="text-sm text-gray-500 text-center py-4">Aucune pièce trouvée</p>
+                          ) : (
+                            filteredInventory.map((item) => {
+                              const isSelected = selectedParts.some((p) => p.id === item.id);
+                              return (
+                                <button
+                                  key={item.id}
+                                  type="button"
+                                  onClick={() => handleTogglePart(item)}
+                                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-gray-50 transition ${isSelected ? "bg-blue-50" : ""}`}
+                                >
+                                  <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${isSelected ? "bg-[#1B3B8A] border-[#1B3B8A]" : "border-gray-300"}`}>
+                                    {isSelected && (
+                                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                      </svg>
+                                    )}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-gray-800 truncate">{item.name}</p>
+                                    <p className="text-xs text-gray-500">{item.sku}</p>
+                                  </div>
+                                  <span className="text-sm font-semibold text-[#1B3B8A] flex-shrink-0">
+                                    {item.sell_price?.toFixed(2)} €
+                                  </span>
+                                </button>
+                              );
+                            })
+                          )}
+                        </div>
+
+                        {/* Close button */}
+                        <div className="p-2 border-t border-gray-200">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowPartsDropdown(false);
+                              setPartsSearch("");
+                            }}
+                            className="w-full py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition"
+                          >
+                            Fermer
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Selected Parts List */}
+                  {selectedParts.length > 0 && (
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {selectedParts.map((part) => (
+                        <div key={part.id} className="flex items-center gap-2 bg-gray-50 rounded-lg p-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-800 truncate">{part.name}</p>
+                            <p className="text-xs text-gray-500">{part.unit_price?.toFixed(2)} € / unité</p>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handlePartQuantityChange(part.id, -1)}
+                              className="p-1 rounded bg-white border border-gray-300 hover:bg-gray-100"
+                            >
+                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                              </svg>
+                            </button>
+                            <span className="w-8 text-center text-sm font-medium">{part.quantity}</span>
+                            <button
+                              type="button"
+                              onClick={() => handlePartQuantityChange(part.id, 1)}
+                              className="p-1 rounded bg-white border border-gray-300 hover:bg-gray-100"
+                            >
+                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                              </svg>
+                            </button>
+                          </div>
+                          <span className="w-20 text-right text-sm font-semibold text-gray-800">
+                            {(part.quantity * part.unit_price).toFixed(2)} €
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemovePart(part.id)}
+                            className="p-1 rounded text-red-500 hover:bg-red-50"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Parts Total */}
+                  {selectedParts.length > 0 && (
+                    <div className="flex items-center justify-between text-sm bg-green-50 rounded-lg p-3">
+                      <span className="text-green-700 font-medium">Sous-total pièces ({selectedParts.length})</span>
+                      <span className="font-bold text-green-800">{partsTotal.toFixed(2)} €</span>
+                    </div>
+                  )}
+
+                  {/* Manual notes textarea */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Notes additionnelles (optionnel)
+                    </label>
+                    <textarea
+                      value={form.fournitures}
+                      onChange={(e) => set("fournitures", e.target.value)}
+                      placeholder="Notes sur les fournitures..."
+                      rows={3}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#1B3B8A] focus:border-transparent outline-none resize-none"
+                    />
+                  </div>
                 </div>
               )}
 
