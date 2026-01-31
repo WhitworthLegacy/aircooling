@@ -41,6 +41,23 @@ export async function GET(request: NextRequest) {
   }
 }
 
+type QuoteItem = {
+  description?: string;
+  label?: string;
+  quantity?: number;
+  unit_price?: number;
+  kind?: string;
+  inventory_item_id?: string;
+};
+
+type SelectedPart = {
+  id: string;
+  sku: string;
+  name: string;
+  quantity: number;
+  unit_price: number;
+};
+
 export async function POST(request: NextRequest) {
   const requestId = crypto.randomUUID();
 
@@ -49,14 +66,21 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { client_id, items, valid_until, notes, service_type } = body;
+    const {
+      client_id,
+      items,
+      valid_until,
+      notes,
+      service_type,
+      // New fields for labor + parts
+      labor_type,
+      labor_hours,
+      labor_rate,
+      selected_parts,
+    } = body;
 
     if (!client_id) {
       return jsonError("VALIDATION_ERROR", "client_id is required", requestId, 400);
-    }
-
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      return jsonError("VALIDATION_ERROR", "items array is required", requestId, 400);
     }
 
     const supabase = getSupabaseAdmin();
@@ -74,10 +98,76 @@ export async function POST(request: NextRequest) {
     const sequence = String((count || 0) + 1).padStart(3, "0");
     const quote_number = `${datePrefix}-${sequence}`;
 
+    // Build quote items from labor + parts + legacy items
+    const allItems: QuoteItem[] = [];
+
+    // Add labor item if hours specified
+    if (labor_hours && labor_hours > 0) {
+      const rate = labor_rate || 65; // Default hourly rate
+      const laborLabels: Record<string, string> = {
+        installation: "Main d'oeuvre installation",
+        entretien: "Main d'oeuvre entretien",
+        depannage: "Main d'oeuvre dépannage",
+        reparation: "Main d'oeuvre réparation",
+      };
+      allItems.push({
+        kind: "labor",
+        label: laborLabels[labor_type] || "Main d'oeuvre",
+        description: `${labor_hours}h x ${rate}€/h`,
+        quantity: labor_hours,
+        unit_price: rate,
+      });
+    }
+
+    // Add selected parts
+    if (selected_parts && Array.isArray(selected_parts)) {
+      for (const part of selected_parts as SelectedPart[]) {
+        allItems.push({
+          kind: "part",
+          label: part.name,
+          description: part.sku,
+          quantity: part.quantity || 1,
+          unit_price: part.unit_price,
+          inventory_item_id: part.id,
+        });
+      }
+    }
+
+    // Add legacy items format
+    if (items && Array.isArray(items)) {
+      for (const item of items as QuoteItem[]) {
+        allItems.push({
+          kind: item.kind || "labor",
+          label: item.label || item.description || "Article",
+          description: item.description,
+          quantity: item.quantity || 1,
+          unit_price: item.unit_price || 0,
+        });
+      }
+    }
+
+    // Require at least one item
+    if (allItems.length === 0) {
+      return jsonError("VALIDATION_ERROR", "Au moins un élément est requis", requestId, 400);
+    }
+
     // Calculate totals
-    const subtotal = items.reduce((sum: number, item: { quantity?: number; unit_price?: number }) => {
-      return sum + (item.quantity || 1) * (item.unit_price || 0);
-    }, 0);
+    let laborTotal = 0;
+    let partsTotal = 0;
+
+    for (const item of allItems) {
+      const lineTotal = (item.quantity || 1) * (item.unit_price || 0);
+      if (item.kind === "labor") {
+        laborTotal += lineTotal;
+      } else if (item.kind === "part") {
+        partsTotal += lineTotal;
+      }
+    }
+
+    const subtotal = laborTotal + partsTotal;
+    const taxRate = 21;
+    const taxAmount = subtotal * (taxRate / 100);
+    const total = subtotal + taxAmount;
 
     // Default valid_until to 30 days from now
     const validUntilDate = valid_until
@@ -90,13 +180,18 @@ export async function POST(request: NextRequest) {
       .insert({
         client_id,
         quote_number,
-        status: "pending",
-        subtotal,
-        total: subtotal,
-        total_amount: subtotal,
+        status: "draft",
+        labor_total: laborTotal,
+        parts_total: partsTotal,
+        tax_rate: taxRate,
+        tax_amount: taxAmount,
+        total,
         valid_until: validUntilDate,
         notes: notes || null,
         service_type: service_type || null,
+        labor_hours: labor_hours || null,
+        labor_type: labor_type || null,
+        selected_parts: selected_parts || null,
       })
       .select()
       .single();
@@ -107,14 +202,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Create quote items
-    const quoteItems = items.map((item: { description?: string; quantity?: number; unit_price?: number; kind?: string }) => ({
+    const quoteItems = allItems.map((item, index) => ({
       quote_id: quote.id,
-      kind: item.kind || "labor",  // Default to labor if not specified
-      label: item.description || "Article",
-      description: item.description || "Article",
+      kind: item.kind || "labor",
+      label: item.label || "Article",
+      description: item.description || null,
       quantity: item.quantity || 1,
       unit_price: item.unit_price || 0,
       line_total: (item.quantity || 1) * (item.unit_price || 0),
+      inventory_item_id: item.inventory_item_id || null,
+      sort_order: index,
     }));
 
     const { error: itemsError } = await supabase

@@ -32,6 +32,11 @@ import {
   ClipboardList,
   Thermometer,
   Wind,
+  Search,
+  Minus,
+  Package,
+  Wrench,
+  Trash2,
 } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import { Badge, Button, Input, Select, useToast } from '@/components/ui';
@@ -161,6 +166,29 @@ export default function CrmCardModal({
   const [quoteDescription, setQuoteDescription] = useState('');
   const [quoteAmount, setQuoteAmount] = useState('');
 
+  // Enhanced quote form state
+  const [laborType, setLaborType] = useState<string>('installation');
+  const [laborHours, setLaborHours] = useState<string>('');
+  const [laborRate, setLaborRate] = useState<number>(65);
+  const [selectedParts, setSelectedParts] = useState<Array<{
+    id: string;
+    sku: string;
+    name: string;
+    quantity: number;
+    unit_price: number;
+  }>>([]);
+  const [inventoryItems, setInventoryItems] = useState<Array<{
+    id: string;
+    sku: string;
+    name: string;
+    description?: string;
+    item_type: string;
+    sell_price: number;
+    stock_qty?: number;
+  }>>([]);
+  const [inventoryLoading, setInventoryLoading] = useState(false);
+  const [partsSearch, setPartsSearch] = useState('');
+
   // QR code modal
   const [showQRCode, setShowQRCode] = useState(false);
 
@@ -279,6 +307,32 @@ export default function CrmCardModal({
     }
   }, [client?.id]);
 
+  const fetchInventory = useCallback(async () => {
+    setInventoryLoading(true);
+    try {
+      const payload = await apiFetch<{
+        success?: boolean;
+        items?: Array<{
+          id: string;
+          sku: string;
+          name: string;
+          description?: string;
+          item_type: string;
+          sell_price: number;
+          stock_qty?: number;
+        }>;
+      }>('/api/admin/inventory');
+
+      if (payload.items) {
+        setInventoryItems(payload.items);
+      }
+    } catch (error) {
+      console.error('[CRM] failed to fetch inventory', error);
+    } finally {
+      setInventoryLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!client) return;
     setNoteDraft('');
@@ -296,6 +350,13 @@ export default function CrmCardModal({
     fetchPhotos();
     fetchAppointments();
   }, [client, fetchPhotos, fetchAppointments]);
+
+  // Fetch inventory when quote form opens
+  useEffect(() => {
+    if (showQuoteForm && inventoryItems.length === 0) {
+      fetchInventory();
+    }
+  }, [showQuoteForm, inventoryItems.length, fetchInventory]);
 
   const handleAddNote = async () => {
     if (!client || !noteDraft.trim()) return;
@@ -420,8 +481,14 @@ export default function CrmCardModal({
 
   const handleCreateQuote = async () => {
     if (!client?.id) return;
-    if (!quoteDescription.trim() || !quoteAmount) {
-      toast.addToast("Remplissez la description et le montant", 'warning');
+
+    // Validate: need either labor hours or parts or manual amount
+    const hasLabor = laborHours && parseFloat(laborHours) > 0;
+    const hasParts = selectedParts.length > 0;
+    const hasManualAmount = quoteAmount && parseFloat(quoteAmount) > 0;
+
+    if (!hasLabor && !hasParts && !hasManualAmount) {
+      toast.addToast("Ajoutez des heures de travail, des pièces ou un montant", 'warning');
       return;
     }
 
@@ -431,20 +498,34 @@ export default function CrmCardModal({
         method: 'POST',
         body: JSON.stringify({
           client_id: client.id,
-          items: [{
-            description: quoteDescription,
+          // New enhanced fields
+          labor_type: laborType,
+          labor_hours: hasLabor ? parseFloat(laborHours) : 0,
+          labor_rate: laborRate,
+          selected_parts: selectedParts,
+          // Legacy fields (for manual override)
+          items: hasManualAmount && !hasLabor && !hasParts ? [{
+            kind: 'labor',
+            description: quoteDescription || 'Prestation',
             quantity: 1,
             unit_price: parseFloat(quoteAmount),
-          }],
-          service_type: client.systemType || 'installation',
+          }] : [],
+          service_type: laborType || 'installation',
+          notes: quoteDescription || null,
         }),
       });
 
       if (response.success && response.quote) {
         toast.addToast(`Devis ${response.quote.quote_number} créé`, 'success');
+        // Reset form
         setShowQuoteForm(false);
         setQuoteDescription('');
         setQuoteAmount('');
+        setLaborHours('');
+        setLaborType('installation');
+        setLaborRate(65);
+        setSelectedParts([]);
+        setPartsSearch('');
 
         // Auto-update stage to "Devis envoyé"
         if (onStageChange && client.stage !== CRM_STAGES.DEVIS_ENVOYE) {
@@ -458,6 +539,73 @@ export default function CrmCardModal({
       setQuoteSaving(false);
     }
   };
+
+  // Add part to quote
+  const handleAddPart = (item: typeof inventoryItems[0]) => {
+    const existing = selectedParts.find(p => p.id === item.id);
+    if (existing) {
+      setSelectedParts(selectedParts.map(p =>
+        p.id === item.id ? { ...p, quantity: p.quantity + 1 } : p
+      ));
+    } else {
+      setSelectedParts([...selectedParts, {
+        id: item.id,
+        sku: item.sku,
+        name: item.name,
+        quantity: 1,
+        unit_price: item.sell_price,
+      }]);
+    }
+    setPartsSearch('');
+  };
+
+  // Update part quantity
+  const handlePartQuantityChange = (partId: string, delta: number) => {
+    setSelectedParts(selectedParts.map(p => {
+      if (p.id === partId) {
+        const newQty = Math.max(1, p.quantity + delta);
+        return { ...p, quantity: newQty };
+      }
+      return p;
+    }));
+  };
+
+  // Remove part from quote
+  const handleRemovePart = (partId: string) => {
+    setSelectedParts(selectedParts.filter(p => p.id !== partId));
+  };
+
+  // Calculate quote totals
+  const quoteTotals = useMemo(() => {
+    const hours = parseFloat(laborHours) || 0;
+    const laborTotal = hours * laborRate;
+    const partsTotal = selectedParts.reduce((sum, p) => sum + (p.quantity * p.unit_price), 0);
+    const manualAmount = parseFloat(quoteAmount) || 0;
+
+    // If manual amount is set and no labor/parts, use manual
+    const subtotal = (hours > 0 || selectedParts.length > 0)
+      ? laborTotal + partsTotal
+      : manualAmount;
+
+    const tva = subtotal * 0.21;
+    const total = subtotal + tva;
+
+    return { laborTotal, partsTotal, subtotal, tva, total };
+  }, [laborHours, laborRate, selectedParts, quoteAmount]);
+
+  // Filter inventory items for search
+  const filteredInventory = useMemo(() => {
+    if (!partsSearch.trim()) return [];
+    const search = partsSearch.toLowerCase();
+    return inventoryItems
+      .filter(item => item.item_type === 'part')
+      .filter(item =>
+        item.name.toLowerCase().includes(search) ||
+        item.sku?.toLowerCase().includes(search) ||
+        item.description?.toLowerCase().includes(search)
+      )
+      .slice(0, 8);
+  }, [inventoryItems, partsSearch]);
 
   // Handle payment status change
   const handlePaymentChange = async (paid: boolean, method?: string) => {
@@ -1380,75 +1528,257 @@ export default function CrmCardModal({
         isOpen={showQuoteForm}
         onClose={() => setShowQuoteForm(false)}
         title="Créer un devis"
-        size="lg"
+        size="xl"
       >
         <div className="space-y-4">
           {/* Client Info Summary */}
-          <div className="bg-airSurface/50 rounded-xl p-4 space-y-2">
+          <div className="bg-airSurface/50 rounded-xl p-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-airPrimary/10 flex items-center justify-center">
                 <User className="w-5 h-5 text-airPrimary" />
               </div>
-              <div>
+              <div className="flex-1">
                 <p className="font-semibold text-airDark">{client?.name}</p>
-                <p className="text-sm text-airMuted">{client?.phone}</p>
+                <p className="text-sm text-airMuted">{clientAddress || client?.phone}</p>
               </div>
+              {client?.systemType && (
+                <Badge size="sm" variant="accent" className="flex items-center gap-1">
+                  <Wind className="w-3 h-3" /> {client.systemType}
+                </Badge>
+              )}
             </div>
-            {clientAddress && (
-              <div className="flex items-center gap-2 text-sm text-airMuted">
-                <MapPin className="w-4 h-4" />
-                <span>{clientAddress}</span>
-              </div>
-            )}
-            {client?.systemType && (
-              <Badge size="sm" variant="accent" className="flex items-center gap-1 w-fit">
-                <Wind className="w-3 h-3" /> {client.systemType}
-              </Badge>
-            )}
           </div>
 
-          {/* Quote Form */}
-          <div className="space-y-4">
-            <Input
-              label="Description du service"
-              value={quoteDescription}
-              onChange={(e) => setQuoteDescription(e.target.value)}
-              placeholder="Ex: Installation climatisation mono-split Fujitsu 3.5kW"
-            />
+          <div className="grid md:grid-cols-2 gap-4">
+            {/* Left Column - Labor & Parts */}
+            <div className="space-y-4">
+              {/* Labor Section */}
+              <section className="bg-white rounded-xl border border-airBorder p-4 space-y-3">
+                <p className="text-sm font-semibold text-airDark flex items-center gap-2">
+                  <Wrench className="w-4 h-4" /> Main d&apos;oeuvre
+                </p>
 
-            <div className="grid grid-cols-2 gap-4">
-              <Input
-                label="Montant HT (€)"
-                type="number"
-                value={quoteAmount}
-                onChange={(e) => setQuoteAmount(e.target.value)}
-                placeholder="1500"
-              />
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-airDark">TVA (21%)</label>
-                <div className="h-10 px-3 rounded-xl border border-airBorder bg-airSurface/30 flex items-center text-airMuted">
-                  {quoteAmount ? (parseFloat(quoteAmount) * 0.21).toFixed(2) : '0.00'} €
+                <Select
+                  label="Type de prestation"
+                  value={laborType}
+                  onChange={(e) => {
+                    setLaborType(e.target.value);
+                    // Auto-adjust rate based on type
+                    const rates: Record<string, number> = {
+                      installation: 65,
+                      entretien: 55,
+                      depannage: 75,
+                      diagnostic: 75,
+                      reparation: 70,
+                    };
+                    setLaborRate(rates[e.target.value] || 65);
+                  }}
+                  options={[
+                    { value: 'installation', label: 'Installation' },
+                    { value: 'entretien', label: 'Entretien' },
+                    { value: 'depannage', label: 'Dépannage' },
+                    { value: 'diagnostic', label: 'Diagnostic' },
+                    { value: 'reparation', label: 'Réparation' },
+                  ]}
+                />
+
+                <div className="grid grid-cols-2 gap-3">
+                  <Input
+                    label="Heures estimées"
+                    type="number"
+                    value={laborHours}
+                    onChange={(e) => setLaborHours(e.target.value)}
+                    placeholder="4"
+                    min="0"
+                    step="0.5"
+                  />
+                  <Input
+                    label="Taux horaire (€)"
+                    type="number"
+                    value={laborRate.toString()}
+                    onChange={(e) => setLaborRate(parseFloat(e.target.value) || 0)}
+                    min="0"
+                  />
                 </div>
-              </div>
+
+                {parseFloat(laborHours) > 0 && (
+                  <div className="flex items-center justify-between text-sm bg-blue-50 rounded-lg p-2">
+                    <span className="text-blue-700">Sous-total main d&apos;oeuvre</span>
+                    <span className="font-semibold text-blue-800">{quoteTotals.laborTotal.toFixed(2)} €</span>
+                  </div>
+                )}
+              </section>
+
+              {/* Parts Section */}
+              <section className="bg-white rounded-xl border border-airBorder p-4 space-y-3">
+                <p className="text-sm font-semibold text-airDark flex items-center gap-2">
+                  <Package className="w-4 h-4" /> Pièces et matériel
+                </p>
+
+                {/* Parts Search */}
+                <div className="relative">
+                  <div className="flex items-center gap-2 border border-airBorder rounded-xl px-3 py-2">
+                    <Search className="w-4 h-4 text-airMuted" />
+                    <input
+                      type="text"
+                      value={partsSearch}
+                      onChange={(e) => setPartsSearch(e.target.value)}
+                      placeholder="Rechercher une pièce..."
+                      className="flex-1 text-sm outline-none bg-transparent"
+                    />
+                    {inventoryLoading && <Loader2 className="w-4 h-4 animate-spin text-airMuted" />}
+                  </div>
+
+                  {/* Search Results Dropdown */}
+                  {filteredInventory.length > 0 && (
+                    <div className="absolute z-10 mt-1 w-full bg-white border border-airBorder rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                      {filteredInventory.map((item) => (
+                        <button
+                          key={item.id}
+                          onClick={() => handleAddPart(item)}
+                          className="w-full text-left px-3 py-2 hover:bg-airSurface transition text-sm"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-medium text-airDark">{item.name}</p>
+                              <p className="text-xs text-airMuted">{item.sku}</p>
+                            </div>
+                            <span className="font-semibold text-airPrimary">{item.sell_price.toFixed(2)} €</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Selected Parts List */}
+                {selectedParts.length > 0 && (
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {selectedParts.map((part) => (
+                      <div key={part.id} className="flex items-center gap-2 bg-airSurface/50 rounded-lg p-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-airDark truncate">{part.name}</p>
+                          <p className="text-xs text-airMuted">{part.unit_price.toFixed(2)} € / unité</p>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => handlePartQuantityChange(part.id, -1)}
+                            className="p-1 rounded bg-white border border-airBorder hover:bg-airSurface"
+                          >
+                            <Minus className="w-3 h-3" />
+                          </button>
+                          <span className="w-8 text-center text-sm font-medium">{part.quantity}</span>
+                          <button
+                            onClick={() => handlePartQuantityChange(part.id, 1)}
+                            className="p-1 rounded bg-white border border-airBorder hover:bg-airSurface"
+                          >
+                            <Plus className="w-3 h-3" />
+                          </button>
+                        </div>
+                        <span className="w-20 text-right text-sm font-semibold text-airDark">
+                          {(part.quantity * part.unit_price).toFixed(2)} €
+                        </span>
+                        <button
+                          onClick={() => handleRemovePart(part.id)}
+                          className="p-1 rounded text-red-500 hover:bg-red-50"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {selectedParts.length > 0 && (
+                  <div className="flex items-center justify-between text-sm bg-green-50 rounded-lg p-2">
+                    <span className="text-green-700">Sous-total pièces ({selectedParts.length})</span>
+                    <span className="font-semibold text-green-800">{quoteTotals.partsTotal.toFixed(2)} €</span>
+                  </div>
+                )}
+
+                {selectedParts.length === 0 && (
+                  <p className="text-xs text-airMuted text-center py-2">
+                    Recherchez et ajoutez des pièces ci-dessus
+                  </p>
+                )}
+              </section>
             </div>
 
-            {/* Total */}
-            <div className="bg-gradient-to-r from-airPrimary/10 to-airAccent/10 rounded-xl p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-airDark">Total TTC</span>
-                <span className="text-2xl font-bold text-airPrimary">
-                  {quoteAmount ? (parseFloat(quoteAmount) * 1.21).toFixed(2) : '0.00'} €
-                </span>
-              </div>
-            </div>
+            {/* Right Column - Summary & Notes */}
+            <div className="space-y-4">
+              {/* Notes */}
+              <section className="bg-white rounded-xl border border-airBorder p-4">
+                <Input
+                  label="Notes / Description"
+                  value={quoteDescription}
+                  onChange={(e) => setQuoteDescription(e.target.value)}
+                  placeholder="Ex: Installation climatisation avec passage gaine technique"
+                />
+              </section>
 
-            {/* Service Type */}
-            <Select
-              label="Type de service"
-              value={client?.systemType || 'installation'}
-              onChange={() => {}}
-              options={SERVICE_OPTIONS}
-            />
+              {/* Manual Amount (fallback) */}
+              {parseFloat(laborHours || '0') === 0 && selectedParts.length === 0 && (
+                <section className="bg-amber-50 rounded-xl border border-amber-200 p-4 space-y-3">
+                  <p className="text-sm font-semibold text-amber-800 flex items-center gap-2">
+                    <Euro className="w-4 h-4" /> Montant forfaitaire
+                  </p>
+                  <p className="text-xs text-amber-700">
+                    Si vous n&apos;utilisez pas le détail heures/pièces, entrez un montant global :
+                  </p>
+                  <Input
+                    label="Montant HT (€)"
+                    type="number"
+                    value={quoteAmount}
+                    onChange={(e) => setQuoteAmount(e.target.value)}
+                    placeholder="1500"
+                  />
+                </section>
+              )}
+
+              {/* Quote Summary */}
+              <section className="bg-gradient-to-br from-airPrimary/5 to-airAccent/5 rounded-xl border border-airPrimary/20 p-4 space-y-3">
+                <p className="text-sm font-semibold text-airDark">Récapitulatif du devis</p>
+
+                <div className="space-y-2 text-sm">
+                  {quoteTotals.laborTotal > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-airMuted">Main d&apos;oeuvre ({laborHours}h)</span>
+                      <span className="font-medium">{quoteTotals.laborTotal.toFixed(2)} €</span>
+                    </div>
+                  )}
+                  {quoteTotals.partsTotal > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-airMuted">Pièces et matériel</span>
+                      <span className="font-medium">{quoteTotals.partsTotal.toFixed(2)} €</span>
+                    </div>
+                  )}
+                  {quoteTotals.laborTotal === 0 && quoteTotals.partsTotal === 0 && parseFloat(quoteAmount) > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-airMuted">Forfait</span>
+                      <span className="font-medium">{parseFloat(quoteAmount).toFixed(2)} €</span>
+                    </div>
+                  )}
+
+                  <div className="border-t border-airBorder pt-2">
+                    <div className="flex justify-between">
+                      <span className="text-airMuted">Sous-total HT</span>
+                      <span className="font-medium">{quoteTotals.subtotal.toFixed(2)} €</span>
+                    </div>
+                    <div className="flex justify-between text-airMuted">
+                      <span>TVA (21%)</span>
+                      <span>{quoteTotals.tva.toFixed(2)} €</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-airPrimary/20">
+                  <span className="text-lg font-bold text-airDark">Total TTC</span>
+                  <span className="text-2xl font-bold text-airPrimary">
+                    {quoteTotals.total.toFixed(2)} €
+                  </span>
+                </div>
+              </section>
+            </div>
           </div>
 
           {/* Actions */}
@@ -1459,6 +1789,11 @@ export default function CrmCardModal({
                 setShowQuoteForm(false);
                 setQuoteDescription('');
                 setQuoteAmount('');
+                setLaborHours('');
+                setLaborType('installation');
+                setLaborRate(65);
+                setSelectedParts([]);
+                setPartsSearch('');
               }}
               className="flex-1"
             >
@@ -1468,7 +1803,7 @@ export default function CrmCardModal({
               variant="primary"
               onClick={handleCreateQuote}
               loading={quoteSaving}
-              disabled={!quoteDescription.trim() || !quoteAmount}
+              disabled={quoteTotals.total === 0}
               icon={<FileText className="w-4 h-4" />}
               className="flex-1"
             >
