@@ -1,10 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabaseMiddlewareClient } from "@/lib/supabaseServer";
+import { createServerClient } from "@supabase/ssr";
 
 export async function middleware(request: NextRequest) {
-  const response = NextResponse.next();
-  const supabase = getSupabaseMiddlewareClient(request, response);
-  await supabase.auth.getUser();
+  let response = NextResponse.next({ request });
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  // Skip auth refresh if env vars are missing
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error("[Middleware] Missing Supabase env vars");
+    return response;
+  }
+
+  try {
+    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => {
+            request.cookies.set(name, value);
+          });
+          response = NextResponse.next({ request });
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options);
+          });
+        },
+      },
+    });
+    await supabase.auth.getUser();
+  } catch (error) {
+    console.error("[Middleware] Auth error:", error);
+  }
+
   return response;
 }
 
