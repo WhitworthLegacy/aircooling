@@ -14,8 +14,6 @@ import {
   MessageSquare,
   Settings,
   UserCog,
-  Wrench,
-  MapPin,
   type LucideIcon,
 } from 'lucide-react';
 import { useUserRole } from '@/lib/useUserRole';
@@ -31,8 +29,6 @@ export type NavItem = {
 const navItems: NavItem[] = [
   { label: 'Home', href: '/dashboard', icon: LayoutDashboard },
   { label: 'RDV', href: '/dashboard/appointments', icon: Calendar },
-  { label: 'Interventions', href: '/dashboard/interventions', icon: Wrench, roles: ['admin', 'super_admin'] },
-  { label: 'Missions', href: '/dashboard/missions', icon: MapPin, roles: ['admin', 'super_admin'] },
   { label: 'CRM', href: '/dashboard/crm', icon: Kanban, roles: ['admin', 'super_admin'] },
   { label: 'Prospects', href: '/dashboard/prospects', icon: UserPlus, roles: ['admin', 'super_admin'] },
   { label: 'Devis', href: '/dashboard/devis', icon: FileText, roles: ['admin', 'super_admin'] },
