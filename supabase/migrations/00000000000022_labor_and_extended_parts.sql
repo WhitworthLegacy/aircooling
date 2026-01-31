@@ -38,6 +38,19 @@ BEGIN
 END $$;
 
 -- =====================================================
+-- Add unique constraint on reference column
+-- =====================================================
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'inventory_items_reference_key'
+  ) THEN
+    ALTER TABLE inventory_items ADD CONSTRAINT inventory_items_reference_key UNIQUE (reference);
+  END IF;
+END $$;
+
+-- =====================================================
 -- LABOR RATES (Main d'oeuvre)
 -- =====================================================
 INSERT INTO inventory_items (
