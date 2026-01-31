@@ -57,12 +57,13 @@ export default function CrmBoard() {
     try {
       const payload = await apiFetch<{
         success: boolean;
+        clients?: SheetClientRow[];
         data?: SheetClientRow[] | { rows?: SheetClientRow[] };
       }>("/api/clients");
 
-      const rows = Array.isArray(payload.data)
-        ? payload.data
-        : payload.data?.rows || [];
+      // Support both new format (clients) and legacy formats (data, data.rows)
+      const rows = payload.clients
+        || (Array.isArray(payload.data) ? payload.data : payload.data?.rows || []);
 
       setClients(rows.map((row) => normalizeClientRow(row)));
     } catch (err) {

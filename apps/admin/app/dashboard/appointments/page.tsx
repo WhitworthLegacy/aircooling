@@ -55,7 +55,8 @@ function formatTrackingId(trackingId?: number | null): string | null {
 
 type Client = {
   id: string;
-  full_name?: string;
+  first_name?: string;
+  last_name?: string;
   phone?: string;
   address?: string;
 };
@@ -74,11 +75,11 @@ const DAYS_FR = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 const DAYS_FR_FULL = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
 
 const SERVICE_TYPES = [
-  { value: 'collecte', label: 'Collecte', icon: '🚚', color: 'bg-amber-100 text-amber-800' },
-  { value: 'livraison', label: 'Livraison', icon: '📦', color: 'bg-blue-100 text-blue-800' },
-  { value: 'reparation', label: 'Réparation', icon: '🔧', color: 'bg-purple-100 text-purple-800' },
-  { value: 'diagnostic', label: 'Diagnostic', icon: '🔍', color: 'bg-teal-100 text-teal-800' },
-  { value: 'entretien', label: 'Entretien', icon: '⚙️', color: 'bg-gray-100 text-gray-800' },
+  { value: 'installation', label: 'Installation', icon: '❄️', color: 'bg-blue-100 text-blue-800' },
+  { value: 'entretien', label: 'Entretien annuel', icon: '🔧', color: 'bg-green-100 text-green-800' },
+  { value: 'depannage', label: 'Dépannage', icon: '⚡', color: 'bg-red-100 text-red-800' },
+  { value: 'diagnostic', label: 'Diagnostic', icon: '🔍', color: 'bg-amber-100 text-amber-800' },
+  { value: 'devis', label: 'Visite devis', icon: '📋', color: 'bg-purple-100 text-purple-800' },
 ];
 
 const APPOINTMENT_STATUSES = [
@@ -139,7 +140,7 @@ export default function AppointmentsPage() {
     client_id: '',
     customer_name: '',
     customer_phone: '',
-    service_type: 'collecte',
+    service_type: 'installation',
     date: '',
     slot: '09:00',
     address: '',
@@ -202,8 +203,8 @@ export default function AppointmentsPage() {
       const supabase = getSupabaseBrowserClient();
       const { data } = await supabase
         .from('clients')
-        .select('id, full_name, phone, address')
-        .order('full_name');
+        .select('id, first_name, last_name, phone, address')
+        .order('last_name');
       setClients(data || []);
     } catch (err) {
       console.error('[appointments] load clients failed', err);
@@ -328,7 +329,7 @@ export default function AppointmentsPage() {
       client_id: '',
       customer_name: '',
       customer_phone: '',
-      service_type: 'collecte',
+      service_type: 'installation',
       date: today,
       slot: '09:00',
       address: '',
@@ -341,9 +342,10 @@ export default function AppointmentsPage() {
     setNewForm((prev) => ({ ...prev, client_id: clientId }));
     const client = clients.find((c) => c.id === clientId);
     if (client) {
+      const fullName = [client.first_name, client.last_name].filter(Boolean).join(' ');
       setNewForm((prev) => ({
         ...prev,
-        customer_name: client.full_name || '',
+        customer_name: fullName || '',
         customer_phone: client.phone || '',
         address: client.address || '',
       }));
@@ -816,11 +818,14 @@ export default function AppointmentsPage() {
               className="w-full rounded-xl border border-airBorder px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-airPrimary"
             >
               <option value="">-- Nouveau client --</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.full_name} {c.phone ? `(${c.phone})` : ''}
-                </option>
-              ))}
+              {clients.map((c) => {
+                const name = [c.first_name, c.last_name].filter(Boolean).join(' ') || 'Client';
+                return (
+                  <option key={c.id} value={c.id}>
+                    {name} {c.phone ? `(${c.phone})` : ''}
+                  </option>
+                );
+              })}
             </select>
           </div>
 
@@ -855,7 +860,7 @@ export default function AppointmentsPage() {
           </div>
 
           <Select
-            label="Type de service"
+            label="Type d'intervention"
             value={newForm.service_type}
             onChange={(e) => setNewForm((prev) => ({ ...prev, service_type: e.target.value }))}
             options={SERVICE_TYPES.map(s => ({ value: s.value, label: `${s.icon} ${s.label}` }))}
