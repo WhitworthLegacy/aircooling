@@ -37,6 +37,8 @@ import {
   Package,
   Wrench,
   Trash2,
+  ChevronDown,
+  Check,
 } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import { Badge, Button, Input, Select, useToast } from '@/components/ui';
@@ -188,6 +190,7 @@ export default function CrmCardModal({
   }>>([]);
   const [inventoryLoading, setInventoryLoading] = useState(false);
   const [partsSearch, setPartsSearch] = useState('');
+  const [showPartsDropdown, setShowPartsDropdown] = useState(false);
 
   // QR code modal
   const [showQRCode, setShowQRCode] = useState(false);
@@ -593,19 +596,33 @@ export default function CrmCardModal({
     return { laborTotal, partsTotal, subtotal, tva, total };
   }, [laborHours, laborRate, selectedParts, quoteAmount]);
 
-  // Filter inventory items for search
+  // Filter inventory items for dropdown
   const filteredInventory = useMemo(() => {
-    if (!partsSearch.trim()) return [];
+    const parts = inventoryItems.filter(item => item.item_type === 'part');
+    if (!partsSearch.trim()) return parts;
     const search = partsSearch.toLowerCase();
-    return inventoryItems
-      .filter(item => item.item_type === 'part')
-      .filter(item =>
-        item.name.toLowerCase().includes(search) ||
-        item.sku?.toLowerCase().includes(search) ||
-        item.description?.toLowerCase().includes(search)
-      )
-      .slice(0, 8);
+    return parts.filter(item =>
+      item.name.toLowerCase().includes(search) ||
+      item.sku?.toLowerCase().includes(search) ||
+      item.description?.toLowerCase().includes(search)
+    );
   }, [inventoryItems, partsSearch]);
+
+  // Toggle part selection
+  const handleTogglePart = (item: typeof inventoryItems[0]) => {
+    const existing = selectedParts.find(p => p.id === item.id);
+    if (existing) {
+      setSelectedParts(selectedParts.filter(p => p.id !== item.id));
+    } else {
+      setSelectedParts([...selectedParts, {
+        id: item.id,
+        sku: item.sku,
+        name: item.name,
+        quantity: 1,
+        unit_price: item.sell_price,
+      }]);
+    }
+  };
 
   // Handle payment status change
   const handlePaymentChange = async (paid: boolean, method?: string) => {
@@ -1615,45 +1632,99 @@ export default function CrmCardModal({
                   <Package className="w-4 h-4" /> Pièces et matériel
                 </p>
 
-                {/* Parts Search */}
+                {/* Multi-select Dropdown */}
                 <div className="relative">
-                  <div className="flex items-center gap-2 border border-airBorder rounded-xl px-3 py-2">
-                    <Search className="w-4 h-4 text-airMuted" />
-                    <input
-                      type="text"
-                      value={partsSearch}
-                      onChange={(e) => setPartsSearch(e.target.value)}
-                      placeholder="Rechercher une pièce..."
-                      className="flex-1 text-sm outline-none bg-transparent"
-                    />
-                    {inventoryLoading && <Loader2 className="w-4 h-4 animate-spin text-airMuted" />}
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowPartsDropdown(!showPartsDropdown)}
+                    className="w-full flex items-center justify-between gap-2 border border-airBorder rounded-xl px-3 py-2.5 bg-white hover:bg-airSurface/50 transition"
+                  >
+                    <span className="text-sm text-airMuted">
+                      {selectedParts.length > 0
+                        ? `${selectedParts.length} pièce${selectedParts.length > 1 ? 's' : ''} sélectionnée${selectedParts.length > 1 ? 's' : ''}`
+                        : 'Sélectionner des pièces...'}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      {inventoryLoading && <Loader2 className="w-4 h-4 animate-spin text-airMuted" />}
+                      <ChevronDown className={`w-4 h-4 text-airMuted transition-transform ${showPartsDropdown ? 'rotate-180' : ''}`} />
+                    </div>
+                  </button>
 
-                  {/* Search Results Dropdown */}
-                  {filteredInventory.length > 0 && (
-                    <div className="absolute z-10 mt-1 w-full bg-white border border-airBorder rounded-xl shadow-lg max-h-48 overflow-y-auto">
-                      {filteredInventory.map((item) => (
-                        <button
-                          key={item.id}
-                          onClick={() => handleAddPart(item)}
-                          className="w-full text-left px-3 py-2 hover:bg-airSurface transition text-sm"
+                  {/* Dropdown Panel */}
+                  {showPartsDropdown && (
+                    <div className="absolute z-20 mt-1 w-full bg-white border border-airBorder rounded-xl shadow-lg">
+                      {/* Search inside dropdown */}
+                      <div className="p-2 border-b border-airBorder">
+                        <div className="flex items-center gap-2 bg-airSurface/50 rounded-lg px-3 py-2">
+                          <Search className="w-4 h-4 text-airMuted" />
+                          <input
+                            type="text"
+                            value={partsSearch}
+                            onChange={(e) => setPartsSearch(e.target.value)}
+                            placeholder="Rechercher..."
+                            className="flex-1 text-sm outline-none bg-transparent"
+                            autoFocus
+                          />
+                        </div>
+                      </div>
+
+                      {/* Options list */}
+                      <div className="max-h-64 overflow-y-auto">
+                        {filteredInventory.length === 0 ? (
+                          <p className="text-sm text-airMuted text-center py-4">Aucune pièce trouvée</p>
+                        ) : (
+                          filteredInventory.map((item) => {
+                            const isSelected = selectedParts.some(p => p.id === item.id);
+                            return (
+                              <button
+                                key={item.id}
+                                type="button"
+                                onClick={() => handleTogglePart(item)}
+                                className={`w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-airSurface/50 transition ${
+                                  isSelected ? 'bg-airPrimary/5' : ''
+                                }`}
+                              >
+                                <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+                                  isSelected
+                                    ? 'bg-airPrimary border-airPrimary'
+                                    : 'border-airBorder'
+                                }`}>
+                                  {isSelected && <Check className="w-3 h-3 text-white" />}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-airDark truncate">{item.name}</p>
+                                  <p className="text-xs text-airMuted">{item.sku}</p>
+                                </div>
+                                <span className="text-sm font-semibold text-airPrimary flex-shrink-0">
+                                  {item.sell_price.toFixed(2)} €
+                                </span>
+                              </button>
+                            );
+                          })
+                        )}
+                      </div>
+
+                      {/* Close button */}
+                      <div className="p-2 border-t border-airBorder">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setShowPartsDropdown(false);
+                            setPartsSearch('');
+                          }}
+                          className="w-full"
                         >
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="font-medium text-airDark">{item.name}</p>
-                              <p className="text-xs text-airMuted">{item.sku}</p>
-                            </div>
-                            <span className="font-semibold text-airPrimary">{item.sell_price.toFixed(2)} €</span>
-                          </div>
-                        </button>
-                      ))}
+                          Fermer
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </div>
 
-                {/* Selected Parts List */}
+                {/* Selected Parts List with quantities */}
                 {selectedParts.length > 0 && (
-                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
                     {selectedParts.map((part) => (
                       <div key={part.id} className="flex items-center gap-2 bg-airSurface/50 rounded-lg p-2">
                         <div className="flex-1 min-w-0">
@@ -1662,6 +1733,7 @@ export default function CrmCardModal({
                         </div>
                         <div className="flex items-center gap-1">
                           <button
+                            type="button"
                             onClick={() => handlePartQuantityChange(part.id, -1)}
                             className="p-1 rounded bg-white border border-airBorder hover:bg-airSurface"
                           >
@@ -1669,6 +1741,7 @@ export default function CrmCardModal({
                           </button>
                           <span className="w-8 text-center text-sm font-medium">{part.quantity}</span>
                           <button
+                            type="button"
                             onClick={() => handlePartQuantityChange(part.id, 1)}
                             className="p-1 rounded bg-white border border-airBorder hover:bg-airSurface"
                           >
@@ -1679,6 +1752,7 @@ export default function CrmCardModal({
                           {(part.quantity * part.unit_price).toFixed(2)} €
                         </span>
                         <button
+                          type="button"
                           onClick={() => handleRemovePart(part.id)}
                           className="p-1 rounded text-red-500 hover:bg-red-50"
                         >
@@ -1694,12 +1768,6 @@ export default function CrmCardModal({
                     <span className="text-green-700">Sous-total pièces ({selectedParts.length})</span>
                     <span className="font-semibold text-green-800">{quoteTotals.partsTotal.toFixed(2)} €</span>
                   </div>
-                )}
-
-                {selectedParts.length === 0 && (
-                  <p className="text-xs text-airMuted text-center py-2">
-                    Recherchez et ajoutez des pièces ci-dessus
-                  </p>
                 )}
               </section>
             </div>
