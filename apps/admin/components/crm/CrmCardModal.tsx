@@ -39,6 +39,10 @@ import {
   Trash2,
   ChevronDown,
   Check,
+  Download,
+  Eye,
+  Printer,
+  Building2,
 } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import { Badge, Button, Input, Select, useToast } from '@/components/ui';
@@ -194,6 +198,29 @@ export default function CrmCardModal({
 
   // QR code modal
   const [showQRCode, setShowQRCode] = useState(false);
+
+  // Quote preview state
+  const [showQuotePreview, setShowQuotePreview] = useState(false);
+  const [createdQuote, setCreatedQuote] = useState<{
+    id: string;
+    quote_number: string;
+    labor_total: number;
+    parts_total: number;
+    tax_rate: number;
+    tax_amount: number;
+    total: number;
+    notes?: string;
+    expires_at: string;
+    quote_items: Array<{
+      kind: string;
+      label: string;
+      description?: string;
+      quantity: number;
+      unit_price: number;
+      line_total: number;
+    }>;
+  } | null>(null);
+  const [quoteSending, setQuoteSending] = useState(false);
 
   // Timeline email
   const [timelineSending, setTimelineSending] = useState(false);
@@ -520,20 +547,13 @@ export default function CrmCardModal({
 
       if (response.success && response.quote) {
         toast.addToast(`Devis ${response.quote.quote_number} créé`, 'success');
-        // Reset form
-        setShowQuoteForm(false);
-        setQuoteDescription('');
-        setQuoteAmount('');
-        setLaborHours('');
-        setLaborType('installation');
-        setLaborRate(65);
-        setSelectedParts([]);
-        setPartsSearch('');
 
-        // Auto-update stage to "Devis envoyé"
-        if (onStageChange && client.stage !== CRM_STAGES.DEVIS_ENVOYE) {
-          await onStageChange(client.id, CRM_STAGES.DEVIS_ENVOYE);
-        }
+        // Store created quote for preview
+        setCreatedQuote(response.quote as typeof createdQuote);
+
+        // Close form, open preview
+        setShowQuoteForm(false);
+        setShowQuotePreview(true);
       }
     } catch (error) {
       console.error('[CRM] failed to create quote', error);
@@ -607,6 +627,55 @@ export default function CrmCardModal({
       item.description?.toLowerCase().includes(search)
     );
   }, [inventoryItems, partsSearch]);
+
+  // Send quote to client via email
+  const handleSendQuote = async () => {
+    if (!createdQuote?.id || !client?.email) {
+      toast.addToast("Email client requis pour envoyer le devis", 'warning');
+      return;
+    }
+
+    setQuoteSending(true);
+    try {
+      const response = await apiFetch<{ ok: boolean; sent_to?: string }>('/api/admin/emails/resend-quote', {
+        method: 'POST',
+        body: JSON.stringify({
+          quote_id: createdQuote.id,
+        }),
+      });
+
+      if (response.ok) {
+        toast.addToast(`Devis envoyé à ${response.sent_to || client.email}`, 'success');
+
+        // Update stage to "Devis envoyé"
+        if (onStageChange && client.stage !== CRM_STAGES.DEVIS_ENVOYE) {
+          await onStageChange(client.id, CRM_STAGES.DEVIS_ENVOYE);
+        }
+
+        // Close preview and reset
+        handleCloseQuotePreview();
+      }
+    } catch (error) {
+      console.error('[CRM] failed to send quote', error);
+      toast.addToast("Erreur lors de l'envoi du devis", 'error');
+    } finally {
+      setQuoteSending(false);
+    }
+  };
+
+  // Close quote preview and reset form state
+  const handleCloseQuotePreview = () => {
+    setShowQuotePreview(false);
+    setCreatedQuote(null);
+    // Reset form
+    setQuoteDescription('');
+    setQuoteAmount('');
+    setLaborHours('');
+    setLaborType('installation');
+    setLaborRate(65);
+    setSelectedParts([]);
+    setPartsSearch('');
+  };
 
   // Toggle part selection
   const handleTogglePart = (item: typeof inventoryItems[0]) => {
@@ -1879,6 +1948,160 @@ export default function CrmCardModal({
             </Button>
           </div>
         </div>
+      </Modal>
+
+      {/* Quote Preview Modal (PDF-like) */}
+      <Modal
+        isOpen={showQuotePreview}
+        onClose={handleCloseQuotePreview}
+        title="Prévisualisation du devis"
+        size="4xl"
+      >
+        {createdQuote && (
+          <div className="space-y-4">
+            {/* PDF Preview Container */}
+            <div className="bg-white border border-gray-300 rounded-lg shadow-lg mx-auto max-w-[210mm] p-8" style={{ fontFamily: 'Arial, sans-serif' }}>
+              {/* Header */}
+              <div className="flex justify-between items-start border-b-2 border-airPrimary pb-4 mb-6">
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-10 h-10 bg-airPrimary rounded-lg flex items-center justify-center">
+                      <Snowflake className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h1 className="text-xl font-bold text-airDark">AIR COOLING SERVICES</h1>
+                      <p className="text-xs text-airMuted">Climatisation & Chauffage</p>
+                    </div>
+                  </div>
+                  <div className="text-xs text-airMuted space-y-0.5 mt-3">
+                    <p className="flex items-center gap-1"><Building2 className="w-3 h-3" /> Rue de l&apos;Industrie 45</p>
+                    <p>1000 Bruxelles, Belgique</p>
+                    <p>TVA: BE0123.456.789</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="bg-airPrimary text-white px-4 py-2 rounded-lg mb-2">
+                    <p className="text-xs uppercase tracking-wide">Devis N°</p>
+                    <p className="text-lg font-bold">{createdQuote.quote_number}</p>
+                  </div>
+                  <p className="text-xs text-airMuted">
+                    Date: {new Date().toLocaleDateString('fr-FR')}
+                  </p>
+                  <p className="text-xs text-airMuted">
+                    Valide jusqu&apos;au: {new Date(createdQuote.expires_at).toLocaleDateString('fr-FR')}
+                  </p>
+                </div>
+              </div>
+
+              {/* Client Info */}
+              <div className="bg-airSurface/50 rounded-lg p-4 mb-6">
+                <p className="text-xs text-airMuted uppercase tracking-wide mb-1">Client</p>
+                <p className="font-semibold text-airDark">{client?.name}</p>
+                {clientAddress && <p className="text-sm text-airMuted">{clientAddress}</p>}
+                {client?.email && <p className="text-sm text-airMuted">{client.email}</p>}
+                {client?.phone && <p className="text-sm text-airMuted">{client.phone}</p>}
+              </div>
+
+              {/* Quote Items Table */}
+              <table className="w-full mb-6">
+                <thead>
+                  <tr className="bg-airPrimary/10">
+                    <th className="text-left py-2 px-3 text-xs font-semibold text-airDark uppercase">Description</th>
+                    <th className="text-center py-2 px-3 text-xs font-semibold text-airDark uppercase w-20">Qté</th>
+                    <th className="text-right py-2 px-3 text-xs font-semibold text-airDark uppercase w-24">Prix unit.</th>
+                    <th className="text-right py-2 px-3 text-xs font-semibold text-airDark uppercase w-24">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {createdQuote.quote_items?.map((item, index) => (
+                    <tr key={index} className="border-b border-airBorder/50">
+                      <td className="py-3 px-3">
+                        <p className="text-sm font-medium text-airDark">{item.label}</p>
+                        {item.description && (
+                          <p className="text-xs text-airMuted">{item.description}</p>
+                        )}
+                        <Badge size="sm" className={`mt-1 ${item.kind === 'labor' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
+                          {item.kind === 'labor' ? 'Main d\'oeuvre' : 'Pièce'}
+                        </Badge>
+                      </td>
+                      <td className="py-3 px-3 text-center text-sm">{item.quantity}</td>
+                      <td className="py-3 px-3 text-right text-sm">{item.unit_price.toFixed(2)} €</td>
+                      <td className="py-3 px-3 text-right text-sm font-medium">{item.line_total.toFixed(2)} €</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* Totals */}
+              <div className="flex justify-end mb-6">
+                <div className="w-64 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-airMuted">Sous-total HT</span>
+                    <span className="font-medium">{(createdQuote.labor_total + createdQuote.parts_total).toFixed(2)} €</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-airMuted">TVA ({createdQuote.tax_rate}%)</span>
+                    <span>{createdQuote.tax_amount.toFixed(2)} €</span>
+                  </div>
+                  <div className="flex justify-between pt-2 border-t-2 border-airPrimary">
+                    <span className="text-lg font-bold text-airDark">Total TTC</span>
+                    <span className="text-xl font-bold text-airPrimary">{createdQuote.total.toFixed(2)} €</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Notes */}
+              {createdQuote.notes && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+                  <p className="text-xs text-amber-700 uppercase tracking-wide mb-1">Notes</p>
+                  <p className="text-sm text-amber-800">{createdQuote.notes}</p>
+                </div>
+              )}
+
+              {/* Footer */}
+              <div className="border-t border-airBorder pt-4 text-center">
+                <p className="text-xs text-airMuted">
+                  Ce devis est valable 30 jours. Pour accepter, merci de nous contacter.
+                </p>
+                <p className="text-xs text-airMuted mt-1">
+                  Air Cooling Services - Tél: +32 2 123 45 67 - contact@aircooling.be
+                </p>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 pt-4 border-t border-airBorder">
+              <Button
+                variant="ghost"
+                onClick={handleCloseQuotePreview}
+                className="flex-1"
+              >
+                Fermer
+              </Button>
+              <Button
+                variant="ghost"
+                icon={<Download className="w-4 h-4" />}
+                onClick={() => {
+                  // For now, just open print dialog which can save as PDF
+                  window.print();
+                }}
+                className="flex-1"
+              >
+                Télécharger PDF
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleSendQuote}
+                loading={quoteSending}
+                disabled={!client?.email}
+                icon={<Send className="w-4 h-4" />}
+                className="flex-1"
+              >
+                {client?.email ? `Envoyer à ${client.email}` : 'Email requis'}
+              </Button>
+            </div>
+          </div>
+        )}
       </Modal>
     </>
   );

@@ -61,23 +61,25 @@ export async function POST(request: NextRequest) {
 
     // Build quote items for email
     const items = ((quote.quote_items || []) as Array<{
+      label?: string;
       description?: string;
       quantity?: number;
       unit_price?: number;
+      line_total?: number;
     }>).map((item) => ({
-      description: item.description || "Article",
+      description: item.label || item.description || "Article",
       quantity: item.quantity || 1,
       unitPrice: item.unit_price || 0,
-      total: (item.quantity || 1) * (item.unit_price || 0),
+      total: item.line_total || (item.quantity || 1) * (item.unit_price || 0),
     }));
 
     // Calculate total
     const totalAmount = quote.total || quote.total_amount || quote.subtotal ||
       items.reduce((sum, item) => sum + item.total, 0);
 
-    // Format valid_until date
-    const validUntil = quote.valid_until
-      ? new Date(quote.valid_until).toLocaleDateString("fr-BE", {
+    // Format expires_at date (database column name)
+    const validUntil = quote.expires_at
+      ? new Date(quote.expires_at).toLocaleDateString("fr-BE", {
           day: "2-digit",
           month: "long",
           year: "numeric",
@@ -105,10 +107,13 @@ export async function POST(request: NextRequest) {
       html,
     });
 
-    // Update quote sent_at timestamp
+    // Update quote sent_at timestamp and status
     await supabase
       .from("quotes")
-      .update({ sent_at: new Date().toISOString() })
+      .update({
+        sent_at: new Date().toISOString(),
+        status: "sent",
+      })
       .eq("id", quote_id);
 
     return jsonOk({ ok: true, sent_to: client.email });
