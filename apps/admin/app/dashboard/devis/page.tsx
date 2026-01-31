@@ -46,10 +46,11 @@ type Quote = {
   };
   quote_items?: Array<{
     id: string;
-    description: string;
+    label?: string;
+    description?: string;
     quantity: number;
     unit_price: number;
-    total: number;
+    line_total: number;
   }>;
 };
 
@@ -92,10 +93,11 @@ export default function DevisPage() {
           ),
           quote_items (
             id,
+            label,
             description,
             quantity,
             unit_price,
-            total
+            line_total
           )
         `)
         .order("created_at", { ascending: false });
@@ -569,10 +571,10 @@ export default function DevisPage() {
                   key={item.id}
                   className={`px-4 py-3 flex text-sm ${index % 2 === 0 ? "bg-white" : "bg-airSurface/50"}`}
                 >
-                  <span className="flex-1 text-airDark">{item.description}</span>
+                  <span className="flex-1 text-airDark">{item.label || item.description}</span>
                   <span className="w-16 text-center text-airMuted">{item.quantity}</span>
                   <span className="w-20 text-right text-airMuted">{item.unit_price?.toFixed(2)}€</span>
-                  <span className="w-24 text-right font-semibold text-airDark">{item.total?.toFixed(2)}€</span>
+                  <span className="w-24 text-right font-semibold text-airDark">{item.line_total?.toFixed(2)}€</span>
                 </div>
               ))}
               <div className="px-4 py-3 bg-gradient-to-r from-orange-50 to-blue-50 border-t-2 border-airPrimary flex">

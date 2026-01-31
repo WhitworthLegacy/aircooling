@@ -54,13 +54,13 @@ export default function ClientsPage() {
     try {
       const payload = await apiFetch<{
         success: boolean;
+        clients?: SheetClientRow[];
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         data?: SheetClientRow[] | { rows?: SheetClientRow[] } | any[];
       }>('/api/clients');
-      // Support both Supabase (data is array) and Sheets (data.rows) formats
-      const rows = Array.isArray(payload.data)
-        ? payload.data
-        : (payload.data?.rows || []);
+      // Support both new format (clients) and legacy formats (data, data.rows)
+      const rows = payload.clients
+        || (Array.isArray(payload.data) ? payload.data : (payload.data?.rows || []));
       const normalized = rows
         .map((row) => normalizeClientRow(row))
         .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')); // Most recent first
@@ -243,7 +243,7 @@ export default function ClientsPage() {
                 Voir CRM
               </Button>
               <Button href="/dashboard/crm" variant="primary" size="md">
-                + Nouveau lead
+                + Nouveau client
               </Button>
             </div>
           </div>

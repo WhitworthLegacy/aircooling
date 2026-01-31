@@ -1,9 +1,7 @@
 import { NextRequest } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseServer";
 import { jsonOk, jsonError } from "@/lib/apiResponse";
-import { Resend } from "resend";
-
-const resend = new Resend(process.env.RESEND_API_KEY);
+import { resend, FROM_EMAIL } from "@/lib/resend";
 
 // This endpoint should be called by a cron job daily
 // It finds clients who had their last intervention 9 months ago and sends reminder emails
@@ -72,7 +70,7 @@ export async function GET(request: NextRequest) {
       // Send email
       try {
         await resend.emails.send({
-          from: process.env.FROM_EMAIL || "noreply@aircooling.be",
+          from: FROM_EMAIL,
           to: client.email!,
           subject: "🔧 Votre entretien annuel climatisation - AirCooling",
           html: `
