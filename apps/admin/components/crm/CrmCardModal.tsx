@@ -1117,51 +1117,15 @@ export default function CrmCardModal({
                     <FileText className="w-4 h-4" /> Actions
                   </p>
 
-                  {showQuoteForm ? (
-                    <div className="space-y-3 p-3 bg-airSurface/50 rounded-xl">
-                      <Input
-                        label="Description"
-                        value={quoteDescription}
-                        onChange={(e) => setQuoteDescription(e.target.value)}
-                        placeholder="Installation climatisation..."
-                      />
-                      <Input
-                        label="Montant (€)"
-                        type="number"
-                        value={quoteAmount}
-                        onChange={(e) => setQuoteAmount(e.target.value)}
-                        placeholder="1500"
-                      />
-                      <div className="flex gap-2">
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          onClick={handleCreateQuote}
-                          loading={quoteSaving}
-                          className="flex-1"
-                        >
-                          Créer
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setShowQuoteForm(false)}
-                        >
-                          Annuler
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      icon={<FileText className="w-4 h-4" />}
-                      onClick={() => setShowQuoteForm(true)}
-                      className="w-full"
-                    >
-                      Créer un devis
-                    </Button>
-                  )}
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    icon={<FileText className="w-4 h-4" />}
+                    onClick={() => setShowQuoteForm(true)}
+                    className="w-full"
+                  >
+                    Créer un devis
+                  </Button>
 
                   {client.email && (
                     <>
@@ -1410,6 +1374,109 @@ export default function CrmCardModal({
           />
         </div>
       )}
+
+      {/* Quote Creation Modal */}
+      <Modal
+        isOpen={showQuoteForm}
+        onClose={() => setShowQuoteForm(false)}
+        title="Créer un devis"
+        size="lg"
+      >
+        <div className="space-y-4">
+          {/* Client Info Summary */}
+          <div className="bg-airSurface/50 rounded-xl p-4 space-y-2">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-airPrimary/10 flex items-center justify-center">
+                <User className="w-5 h-5 text-airPrimary" />
+              </div>
+              <div>
+                <p className="font-semibold text-airDark">{client?.name}</p>
+                <p className="text-sm text-airMuted">{client?.phone}</p>
+              </div>
+            </div>
+            {clientAddress && (
+              <div className="flex items-center gap-2 text-sm text-airMuted">
+                <MapPin className="w-4 h-4" />
+                <span>{clientAddress}</span>
+              </div>
+            )}
+            {client?.systemType && (
+              <Badge size="sm" variant="accent" className="flex items-center gap-1 w-fit">
+                <Wind className="w-3 h-3" /> {client.systemType}
+              </Badge>
+            )}
+          </div>
+
+          {/* Quote Form */}
+          <div className="space-y-4">
+            <Input
+              label="Description du service"
+              value={quoteDescription}
+              onChange={(e) => setQuoteDescription(e.target.value)}
+              placeholder="Ex: Installation climatisation mono-split Fujitsu 3.5kW"
+            />
+
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Montant HT (€)"
+                type="number"
+                value={quoteAmount}
+                onChange={(e) => setQuoteAmount(e.target.value)}
+                placeholder="1500"
+              />
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-airDark">TVA (21%)</label>
+                <div className="h-10 px-3 rounded-xl border border-airBorder bg-airSurface/30 flex items-center text-airMuted">
+                  {quoteAmount ? (parseFloat(quoteAmount) * 0.21).toFixed(2) : '0.00'} €
+                </div>
+              </div>
+            </div>
+
+            {/* Total */}
+            <div className="bg-gradient-to-r from-airPrimary/10 to-airAccent/10 rounded-xl p-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-airDark">Total TTC</span>
+                <span className="text-2xl font-bold text-airPrimary">
+                  {quoteAmount ? (parseFloat(quoteAmount) * 1.21).toFixed(2) : '0.00'} €
+                </span>
+              </div>
+            </div>
+
+            {/* Service Type */}
+            <Select
+              label="Type de service"
+              value={client?.systemType || 'installation'}
+              onChange={() => {}}
+              options={SERVICE_OPTIONS}
+            />
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3 pt-4 border-t border-airBorder">
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setShowQuoteForm(false);
+                setQuoteDescription('');
+                setQuoteAmount('');
+              }}
+              className="flex-1"
+            >
+              Annuler
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleCreateQuote}
+              loading={quoteSaving}
+              disabled={!quoteDescription.trim() || !quoteAmount}
+              icon={<FileText className="w-4 h-4" />}
+              className="flex-1"
+            >
+              Créer le devis
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </>
   );
 }
