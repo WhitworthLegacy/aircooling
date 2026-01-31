@@ -169,8 +169,8 @@ export async function POST(request: NextRequest) {
     const taxAmount = subtotal * (taxRate / 100);
     const total = subtotal + taxAmount;
 
-    // Default valid_until to 30 days from now
-    const validUntilDate = valid_until
+    // Default expires_at to 30 days from now
+    const expiresAt = valid_until
       ? new Date(valid_until).toISOString()
       : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
@@ -186,9 +186,9 @@ export async function POST(request: NextRequest) {
         tax_rate: taxRate,
         tax_amount: taxAmount,
         total,
-        valid_until: validUntilDate,
+        expires_at: expiresAt,
         notes: notes || null,
-        service_type: service_type || null,
+        internal_notes: labor_type ? `Type: ${labor_type}` : null,
         labor_hours: labor_hours || null,
         labor_type: labor_type || null,
         selected_parts: selected_parts || null,
