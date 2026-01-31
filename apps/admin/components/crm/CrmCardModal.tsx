@@ -1528,7 +1528,7 @@ export default function CrmCardModal({
         isOpen={showQuoteForm}
         onClose={() => setShowQuoteForm(false)}
         title="Créer un devis"
-        size="xl"
+        size="3xl"
       >
         <div className="space-y-4">
           {/* Client Info Summary */}
