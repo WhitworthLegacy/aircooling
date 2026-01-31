@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Loader2, Search, Plus, User, Phone, Mail, MapPin, Calendar, Wrench, FileText, Edit2, Save, X, Navigation, Clock } from 'lucide-react';
+import { Loader2, Search, Plus, User, Phone, Mail, MapPin, Calendar, Wrench, FileText, Edit2, Save, X, Navigation, Clock, MessageSquare, ExternalLink } from 'lucide-react';
 import { Badge, Button, Card, Input, Select, Modal, useToast } from '@/components/ui';
 import { PageContainer } from '@/components/layout';
 import { apiFetch } from '@/lib/apiClient';
@@ -141,16 +141,22 @@ export default function ClientsPage() {
     if (!selectedClient) return;
     setSaving(true);
     try {
+      // Split name into first_name and last_name
+      const nameParts = (editForm.name || '').trim().split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+
       await apiFetch(`/api/clients/${selectedClient.id}`, {
         method: 'PATCH',
         body: JSON.stringify({
-          full_name: editForm.name,
+          first_name: firstName,
+          last_name: lastName,
           phone: editForm.phone,
           email: editForm.email,
-          address: editForm.address,
-          zone: editForm.zone,
+          address: editForm.address,  // API now maps this to address_line1
+          city: editForm.zone,  // Using zone field for city
           notes: editForm.notes,
-          vehicle_info: editForm.vehicleInfo,
+          system_type: editForm.vehicleInfo,  // Using vehicleInfo for system_type in HVAC context
         }),
       });
       toast.addToast('Client mis à jour', 'success');
@@ -342,6 +348,46 @@ export default function ClientsPage() {
       >
         {selectedClient && (
           <div className="space-y-5 max-h-[70vh] overflow-y-auto">
+            {/* Quick Actions Bar */}
+            <div className="flex items-center gap-2 p-3 bg-gradient-to-r from-airSurface to-airSurface/50 rounded-xl">
+              {selectedClient.phone && (
+                <>
+                  <button
+                    onClick={() => window.open(`tel:${selectedClient.phone}`, '_self')}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-green-100 text-green-700 hover:bg-green-200 transition font-medium text-sm"
+                  >
+                    <Phone className="w-4 h-4" />
+                    Appeler
+                  </button>
+                  <button
+                    onClick={() => window.open(`sms:${selectedClient.phone}`, '_self')}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-100 text-blue-700 hover:bg-blue-200 transition font-medium text-sm"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    SMS
+                  </button>
+                </>
+              )}
+              {selectedClient.address && (
+                <>
+                  <button
+                    onClick={() => openGPS(selectedClient.address!, 'waze')}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-cyan-100 text-cyan-700 hover:bg-cyan-200 transition font-medium text-sm"
+                  >
+                    <Navigation className="w-4 h-4" />
+                    Waze
+                  </button>
+                  <button
+                    onClick={() => openGPS(selectedClient.address!, 'google')}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-red-100 text-red-700 hover:bg-red-200 transition font-medium text-sm"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    Maps
+                  </button>
+                </>
+              )}
+            </div>
+
             {/* Header with edit toggle */}
             <div className="flex items-center justify-between">
               <Badge variant="primary">{getStageLabel(selectedClient.stage)}</Badge>

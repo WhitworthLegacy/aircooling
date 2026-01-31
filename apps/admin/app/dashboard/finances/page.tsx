@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
-import { Euro, TrendingUp, FileText, Calendar, Download, Loader2, CheckCircle, Clock, XCircle, X, Phone, Mail, User, Car } from 'lucide-react';
+import { Euro, TrendingUp, FileText, Calendar, Download, Loader2, CheckCircle, Clock, XCircle, X, Phone, Mail, User, Car, MessageSquare } from 'lucide-react';
 import { Badge, Button, Card, Modal, useToast } from '@/components/ui';
 import { PageContainer } from '@/components/layout';
 import { apiFetch } from '@/lib/apiClient';
@@ -369,6 +369,35 @@ export default function FinancesPage() {
                    (selectedQuote.status === 'rejected' || selectedQuote.status === 'refused') ? 'Refusé' : 'En attente'}
                 </Badge>
               </div>
+
+              {/* Quick Actions Bar */}
+              {selectedQuote.clients?.phone && (
+                <div className="flex items-center gap-2 p-3 bg-gradient-to-r from-airSurface to-airSurface/50 rounded-xl">
+                  <button
+                    onClick={() => window.open(`tel:${selectedQuote.clients?.phone}`, '_self')}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-green-100 text-green-700 hover:bg-green-200 transition font-medium text-sm"
+                  >
+                    <Phone className="w-4 h-4" />
+                    Appeler
+                  </button>
+                  <button
+                    onClick={() => window.open(`sms:${selectedQuote.clients?.phone}`, '_self')}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-100 text-blue-700 hover:bg-blue-200 transition font-medium text-sm"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    SMS
+                  </button>
+                  {selectedQuote.clients?.email && (
+                    <button
+                      onClick={() => window.open(`mailto:${selectedQuote.clients?.email}`, '_self')}
+                      className="flex items-center gap-2 px-3 py-2 rounded-xl bg-purple-100 text-purple-700 hover:bg-purple-200 transition font-medium text-sm"
+                    >
+                      <Mail className="w-4 h-4" />
+                      Email
+                    </button>
+                  )}
+                </div>
+              )}
 
               {/* Client Info */}
               {selectedQuote.clients && (

@@ -107,11 +107,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Create quote items
-    const quoteItems = items.map((item: { description?: string; quantity?: number; unit_price?: number }) => ({
+    const quoteItems = items.map((item: { description?: string; quantity?: number; unit_price?: number; kind?: string }) => ({
       quote_id: quote.id,
+      kind: item.kind || "labor",  // Default to labor if not specified
+      label: item.description || "Article",
       description: item.description || "Article",
       quantity: item.quantity || 1,
       unit_price: item.unit_price || 0,
+      line_total: (item.quantity || 1) * (item.unit_price || 0),
     }));
 
     const { error: itemsError } = await supabase

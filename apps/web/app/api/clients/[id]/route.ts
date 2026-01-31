@@ -46,17 +46,28 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     // Only allow updating specific fields
     const allowedFields = [
       "first_name", "last_name", "email", "phone",
-      "address", "city", "postal_code",
+      "address_line1", "city", "postal_code",
       "system_type", "notes", "crm_stage",
       "language", "phone_e164", "whatsapp_optin",
       "preferred_channel", "checklists", "workflow_state",
       "selected_parts",
     ];
 
+    // Field mapping (frontend -> database)
+    const fieldMapping: Record<string, string> = {
+      address: "address_line1",
+    };
+
     const updates: Record<string, unknown> = {};
     for (const key of allowedFields) {
       if (key in body) {
         updates[key] = body[key];
+      }
+    }
+    // Handle mapped fields
+    for (const [frontendKey, dbKey] of Object.entries(fieldMapping)) {
+      if (frontendKey in body) {
+        updates[dbKey] = body[frontendKey];
       }
     }
 

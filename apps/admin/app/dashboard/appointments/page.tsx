@@ -18,6 +18,8 @@ import {
   Truck,
   Wrench,
   Filter,
+  MessageSquare,
+  ExternalLink,
 } from 'lucide-react';
 import { Badge, Button, Card, Input, Modal, Select, useToast } from '@/components/ui';
 import { PageContainer } from '@/components/layout';
@@ -709,6 +711,46 @@ export default function AppointmentsPage() {
       >
         {selectedAppointment && (
           <div className="space-y-4">
+            {/* Quick Actions Bar */}
+            <div className="flex items-center gap-2 p-3 bg-gradient-to-r from-airSurface to-airSurface/50 rounded-xl">
+              {(selectedAppointment.customer_phone || selectedAppointment.client_phone) && (
+                <>
+                  <button
+                    onClick={() => window.open(`tel:${selectedAppointment.customer_phone || selectedAppointment.client_phone}`, '_self')}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-green-100 text-green-700 hover:bg-green-200 transition font-medium text-sm"
+                  >
+                    <Phone className="w-4 h-4" />
+                    Appeler
+                  </button>
+                  <button
+                    onClick={() => window.open(`sms:${selectedAppointment.customer_phone || selectedAppointment.client_phone}`, '_self')}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-100 text-blue-700 hover:bg-blue-200 transition font-medium text-sm"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    SMS
+                  </button>
+                </>
+              )}
+              {(selectedAppointment.client_address || selectedAppointment.address) && (
+                <>
+                  <button
+                    onClick={() => openNavigation(selectedAppointment.client_address || selectedAppointment.address || '', 'waze')}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-cyan-100 text-cyan-700 hover:bg-cyan-200 transition font-medium text-sm"
+                  >
+                    <Navigation className="w-4 h-4" />
+                    Waze
+                  </button>
+                  <button
+                    onClick={() => openNavigation(selectedAppointment.client_address || selectedAppointment.address || '', 'google')}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-red-100 text-red-700 hover:bg-red-200 transition font-medium text-sm"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    Maps
+                  </button>
+                </>
+              )}
+            </div>
+
             {/* Status + Service badges */}
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2">

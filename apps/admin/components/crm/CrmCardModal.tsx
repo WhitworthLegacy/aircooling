@@ -19,13 +19,16 @@ import {
   Calendar,
   Save,
   Snowflake,
+  CheckSquare,
+  Square,
+  ClipboardList,
 } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import { Badge, Button, Input, Select, useToast } from '@/components/ui';
 import { apiFetch } from '@/lib/apiClient';
-import { getSupabaseBrowserClient } from '@/lib/supabase';
 import { CrmClient, CrmColumn } from './types';
 import { STATUS_LABELS, CRM_STAGES } from '@/lib/constants';
+import { ChecklistGroup, HVAC_DIAGNOSTIC_CHECKLIST, HVAC_ENTRETIEN_CHECKLIST } from '@/lib/checklists';
 
 type ClientAppointment = {
   id: string;
@@ -123,9 +126,18 @@ export default function CrmCardModal({
 
   // Quote creation
   const [quoteSaving, setQuoteSaving] = useState(false);
+  const [showQuoteForm, setShowQuoteForm] = useState(false);
+  const [quoteDescription, setQuoteDescription] = useState('');
+  const [quoteAmount, setQuoteAmount] = useState('');
 
   // QR code modal
   const [showQRCode, setShowQRCode] = useState(false);
+
+  // Checklist state
+  const [activeTab, setActiveTab] = useState<'info' | 'checklist'>('info');
+  const [checklistType, setChecklistType] = useState<'diagnostic' | 'entretien'>('diagnostic');
+  const [localChecklists, setLocalChecklists] = useState<Record<string, ChecklistGroup[]>>({});
+  const [checklistSaving, setChecklistSaving] = useState(false);
 
   const stageOptions = useMemo(
     () => columns.map((col) => ({ value: col.slug, label: col.label })),
@@ -155,6 +167,15 @@ export default function CrmCardModal({
   useEffect(() => {
     setLocalNotes(client?.notes || '');
   }, [client?.notes]);
+
+  // Initialize checklists when client changes
+  useEffect(() => {
+    if (client?.checklists) {
+      setLocalChecklists(client.checklists as Record<string, ChecklistGroup[]>);
+    } else {
+      setLocalChecklists({});
+    }
+  }, [client?.checklists]);
 
   const fetchAppointments = useCallback(async () => {
     if (!client?.id) return;
@@ -302,45 +323,117 @@ export default function CrmCardModal({
 
   const handleCreateQuote = async () => {
     if (!client?.id) return;
+    if (!quoteDescription.trim() || !quoteAmount) {
+      toast.addToast("Remplissez la description et le montant", 'warning');
+      return;
+    }
+
     setQuoteSaving(true);
     try {
-      const supabase = getSupabaseBrowserClient();
-
-      // Generate quote number
-      const quoteNumber = `DEV-${Date.now().toString(36).toUpperCase()}`;
-
-      // Create quote in database
-      const { data: quote, error } = await supabase
-        .from('quotes')
-        .insert({
+      // Use the API which requires items array
+      const response = await apiFetch<{ success: boolean; quote?: { quote_number: string } }>('/api/admin/quotes', {
+        method: 'POST',
+        body: JSON.stringify({
           client_id: client.id,
-          quote_number: quoteNumber,
-          status: 'draft',
-          labor_total: 0,
-          parts_total: 0,
-          total: 0,
-          tax_rate: 21,
-        })
-        .select()
-        .single();
+          items: [{
+            description: quoteDescription,
+            quantity: 1,
+            unit_price: parseFloat(quoteAmount),
+          }],
+          service_type: client.systemType || 'installation',
+        }),
+      });
 
-      if (error) throw error;
+      if (response.success && response.quote) {
+        toast.addToast(`Devis ${response.quote.quote_number} créé`, 'success');
+        setShowQuoteForm(false);
+        setQuoteDescription('');
+        setQuoteAmount('');
 
-      toast.addToast(`Devis ${quoteNumber} créé`, 'success');
-
-      // Auto-update stage to "Devis envoyé"
-      if (onStageChange && client.stage !== CRM_STAGES.DEVIS_ENVOYE) {
-        await onStageChange(client.id, CRM_STAGES.DEVIS_ENVOYE);
+        // Auto-update stage to "Devis envoyé"
+        if (onStageChange && client.stage !== CRM_STAGES.DEVIS_ENVOYE) {
+          await onStageChange(client.id, CRM_STAGES.DEVIS_ENVOYE);
+        }
       }
-
-      // Redirect to devis page
-      window.location.href = `/dashboard/devis`;
     } catch (error) {
       console.error('[CRM] failed to create quote', error);
       toast.addToast("Erreur création devis", 'error');
     } finally {
       setQuoteSaving(false);
     }
+  };
+
+  // Get current checklist based on type
+  const getCurrentChecklist = (): ChecklistGroup[] => {
+    const key = checklistType;
+    if (localChecklists[key]) {
+      return localChecklists[key];
+    }
+    // Return default checklist
+    return checklistType === 'diagnostic' ? HVAC_DIAGNOSTIC_CHECKLIST : HVAC_ENTRETIEN_CHECKLIST;
+  };
+
+  // Toggle checklist item
+  const handleToggleChecklistItem = (groupIndex: number, itemIndex: number) => {
+    const key = checklistType;
+    const currentChecklist = getCurrentChecklist();
+
+    const updatedChecklist = currentChecklist.map((group, gIdx) => {
+      if (gIdx === groupIndex) {
+        return {
+          ...group,
+          items: group.items.map((item, iIdx) => {
+            if (iIdx === itemIndex) {
+              return { ...item, checked: !item.checked };
+            }
+            return item;
+          }),
+        };
+      }
+      return group;
+    });
+
+    setLocalChecklists({
+      ...localChecklists,
+      [key]: updatedChecklist,
+    });
+  };
+
+  // Save checklist to backend
+  const handleSaveChecklist = async () => {
+    if (!client?.id) return;
+    setChecklistSaving(true);
+    try {
+      await apiFetch(`/api/clients/${client.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          checklists: localChecklists,
+        }),
+      });
+      toast.addToast('Checklist sauvegardée', 'success');
+      if (onClientUpdate) {
+        await onClientUpdate();
+      }
+    } catch (error) {
+      console.error('[CRM] checklist save failed', error);
+      toast.addToast("Erreur sauvegarde checklist", 'error');
+    } finally {
+      setChecklistSaving(false);
+    }
+  };
+
+  // Calculate checklist progress
+  const getChecklistProgress = (): { done: number; total: number } => {
+    const checklist = getCurrentChecklist();
+    let done = 0;
+    let total = 0;
+    checklist.forEach(group => {
+      group.items.forEach(item => {
+        total++;
+        if (item.checked) done++;
+      });
+    });
+    return { done, total };
   };
 
   const openGPS = (address: string, app: 'waze' | 'google') => {
@@ -451,11 +544,44 @@ export default function CrmCardModal({
             </select>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-4">
-            {/* Left column (2/3) */}
-            <div className="md:col-span-2 space-y-4">
-              {/* Client Profile Card */}
-              <section className="bg-white rounded-2xl border border-airBorder p-4 space-y-3">
+          {/* Tabs */}
+          <div className="flex items-center gap-2 border-b border-airBorder pb-2">
+            <button
+              onClick={() => setActiveTab('info')}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${
+                activeTab === 'info'
+                  ? 'bg-airPrimary text-white'
+                  : 'text-airMuted hover:bg-airSurface'
+              }`}
+            >
+              <User className="w-4 h-4 inline mr-2" />
+              Informations
+            </button>
+            <button
+              onClick={() => setActiveTab('checklist')}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${
+                activeTab === 'checklist'
+                  ? 'bg-airPrimary text-white'
+                  : 'text-airMuted hover:bg-airSurface'
+              }`}
+            >
+              <ClipboardList className="w-4 h-4 inline mr-2" />
+              Checklist
+              {getChecklistProgress().done > 0 && (
+                <span className="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs">
+                  {getChecklistProgress().done}/{getChecklistProgress().total}
+                </span>
+              )}
+            </button>
+          </div>
+
+          {/* Tab Content */}
+          {activeTab === 'info' ? (
+            <div className="grid md:grid-cols-3 gap-4">
+              {/* Left column (2/3) */}
+              <div className="md:col-span-2 space-y-4">
+                {/* Client Profile Card */}
+                <section className="bg-white rounded-2xl border border-airBorder p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold text-airDark flex items-center gap-2">
                     <User className="w-4 h-4" /> Informations client
@@ -681,16 +807,53 @@ export default function CrmCardModal({
                 <p className="text-sm font-semibold text-airDark flex items-center gap-2">
                   <FileText className="w-4 h-4" /> Actions
                 </p>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  icon={quoteSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
-                  onClick={handleCreateQuote}
-                  disabled={quoteSaving}
-                  className="w-full"
-                >
-                  Créer un devis
-                </Button>
+
+                {showQuoteForm ? (
+                  <div className="space-y-3 p-3 bg-airSurface/50 rounded-xl">
+                    <Input
+                      label="Description"
+                      value={quoteDescription}
+                      onChange={(e) => setQuoteDescription(e.target.value)}
+                      placeholder="Installation climatisation..."
+                    />
+                    <Input
+                      label="Montant (€)"
+                      type="number"
+                      value={quoteAmount}
+                      onChange={(e) => setQuoteAmount(e.target.value)}
+                      placeholder="1500"
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={handleCreateQuote}
+                        loading={quoteSaving}
+                        className="flex-1"
+                      >
+                        Créer
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowQuoteForm(false)}
+                      >
+                        Annuler
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    icon={<FileText className="w-4 h-4" />}
+                    onClick={() => setShowQuoteForm(true)}
+                    className="w-full"
+                  >
+                    Créer un devis
+                  </Button>
+                )}
+
                 {client.email && (
                   <Button
                     variant="ghost"
@@ -720,6 +883,94 @@ export default function CrmCardModal({
               </section>
             </div>
           </div>
+          ) : (
+            /* Checklist Tab Content */
+            <div className="space-y-4">
+              {/* Checklist Type Selector */}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setChecklistType('diagnostic')}
+                  className={`flex-1 px-4 py-3 rounded-xl text-sm font-semibold transition border ${
+                    checklistType === 'diagnostic'
+                      ? 'bg-amber-100 text-amber-800 border-amber-300'
+                      : 'bg-white text-airMuted border-airBorder hover:bg-airSurface'
+                  }`}
+                >
+                  Diagnostic
+                </button>
+                <button
+                  onClick={() => setChecklistType('entretien')}
+                  className={`flex-1 px-4 py-3 rounded-xl text-sm font-semibold transition border ${
+                    checklistType === 'entretien'
+                      ? 'bg-green-100 text-green-800 border-green-300'
+                      : 'bg-white text-airMuted border-airBorder hover:bg-airSurface'
+                  }`}
+                >
+                  Entretien annuel
+                </button>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="bg-airSurface rounded-xl p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-semibold text-airDark">Progression</span>
+                  <span className="text-sm text-airMuted">
+                    {getChecklistProgress().done} / {getChecklistProgress().total}
+                  </span>
+                </div>
+                <div className="h-2 bg-airBorder rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-airPrimary to-airAccent transition-all"
+                    style={{
+                      width: `${getChecklistProgress().total > 0 ? (getChecklistProgress().done / getChecklistProgress().total) * 100 : 0}%`
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Checklist Groups */}
+              <div className="space-y-4 max-h-[400px] overflow-y-auto">
+                {getCurrentChecklist().map((group, groupIndex) => (
+                  <div key={group.title} className="bg-white rounded-2xl border border-airBorder p-4">
+                    <h4 className="text-sm font-semibold text-airDark mb-3">{group.title}</h4>
+                    <div className="space-y-2">
+                      {group.items.map((item, itemIndex) => (
+                        <button
+                          key={item.id}
+                          onClick={() => handleToggleChecklistItem(groupIndex, itemIndex)}
+                          className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition ${
+                            item.checked
+                              ? 'bg-green-50 border border-green-200'
+                              : 'bg-airSurface/50 border border-transparent hover:border-airBorder'
+                          }`}
+                        >
+                          {item.checked ? (
+                            <CheckSquare className="w-5 h-5 text-green-600 flex-shrink-0" />
+                          ) : (
+                            <Square className="w-5 h-5 text-airMuted flex-shrink-0" />
+                          )}
+                          <span className={`text-sm ${item.checked ? 'text-green-800' : 'text-airDark'}`}>
+                            {item.label}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Save Button */}
+              <Button
+                variant="primary"
+                onClick={handleSaveChecklist}
+                loading={checklistSaving}
+                icon={<Save className="w-4 h-4" />}
+                className="w-full"
+              >
+                Sauvegarder la checklist
+              </Button>
+            </div>
+          )}
         </div>
       </Modal>
 
