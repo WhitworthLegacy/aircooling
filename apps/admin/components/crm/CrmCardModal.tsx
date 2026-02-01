@@ -48,7 +48,7 @@ import { getSupabaseBrowserClient } from '@/lib/supabase';
 import { CrmClient, CrmColumn } from './types';
 import { STATUS_LABELS, CRM_STAGES } from '@/lib/constants';
 import { ChecklistGroup, HVAC_DIAGNOSTIC_CHECKLIST, HVAC_ENTRETIEN_CHECKLIST } from '@/lib/checklists';
-import { generateQuotePdf, QuotePdfData } from '@/lib/pdf/quote-pdf';
+import type { QuotePdfData } from '@/lib/pdf/quote-pdf';
 
 type ClientAppointment = {
   id: string;
@@ -629,8 +629,9 @@ export default function CrmCardModal({
         };
         setCreatedQuote(quoteData);
 
-        // Generate PDF for preview
+        // Generate PDF for preview (dynamic import for client-side only)
         try {
+          const { generateQuotePdf } = await import('@/lib/pdf/quote-pdf');
           const pdfData: QuotePdfData = {
             quoteNumber: quoteData.quote_number,
             createdAt: new Date().toISOString(),
@@ -661,7 +662,7 @@ export default function CrmCardModal({
           setPdfUrl(url);
         } catch (pdfError) {
           console.error('[CRM] PDF generation failed', pdfError);
-          // Continue without PDF, will show HTML fallback
+          // Continue without PDF, will show loading state
         }
 
         // Close form, open preview

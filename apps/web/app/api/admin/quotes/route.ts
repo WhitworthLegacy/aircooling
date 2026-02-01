@@ -108,6 +108,7 @@ export async function POST(request: NextRequest) {
         installation: "Main d'oeuvre installation",
         entretien: "Main d'oeuvre entretien",
         depannage: "Main d'oeuvre dépannage",
+        diagnostic: "Main d'oeuvre diagnostic",
         reparation: "Main d'oeuvre réparation",
       };
       allItems.push({
