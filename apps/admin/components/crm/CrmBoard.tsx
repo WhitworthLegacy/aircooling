@@ -88,7 +88,7 @@ export default function CrmBoard() {
 
   const filteredClients = useMemo(() => {
     // First, filter out clients with hidden stages (Terminé, Perdu, A contacter)
-    let result = clients.filter((c) => !HIDDEN_STAGES.includes(c.stage || ''));
+    let result = clients.filter((c) => !(HIDDEN_STAGES as string[]).includes(c.stage || ''));
 
     // Then apply search filter
     if (searchTerm) {
