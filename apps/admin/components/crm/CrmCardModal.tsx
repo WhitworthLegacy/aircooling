@@ -49,12 +49,12 @@ import { CrmClient, CrmColumn } from './types';
 import { STATUS_LABELS, CRM_STAGES } from '@/lib/constants';
 import { ChecklistGroup, HVAC_DIAGNOSTIC_CHECKLIST, HVAC_ENTRETIEN_CHECKLIST } from '@/lib/checklists';
 import dynamic from 'next/dynamic';
-import type { QuotePDFData } from '@/components/quotes/QuotePDF';
+import type { QuotePreviewData } from '@/components/quotes/QuotePreviewModal';
 
 // Dynamic import for PDF components (client-side only - @react-pdf/renderer doesn't work on server)
 const QuotePreviewModal = dynamic(
   () => import('@/components/quotes/QuotePreviewModal'),
-  { ssr: false }
+  { ssr: false, loading: () => null }
 );
 
 type ClientAppointment = {
@@ -2056,7 +2056,7 @@ export default function CrmCardModal({
       </Modal>
 
       {/* Quote Preview Modal (PDF Viewer) */}
-      {createdQuote && (
+      {createdQuote && showQuotePreview && (
         <QuotePreviewModal
           open={showQuotePreview}
           onClose={handleCloseQuotePreview}
@@ -2069,7 +2069,6 @@ export default function CrmCardModal({
             clientEmail: client?.email || undefined,
             clientPhone: client?.phone || undefined,
             clientAddress: clientAddress || undefined,
-            trackingId: trackingId,
             items: createdQuote.quote_items,
             laborTotal: createdQuote.labor_total,
             partsTotal: createdQuote.parts_total,
@@ -2078,7 +2077,6 @@ export default function CrmCardModal({
             total: createdQuote.total,
             notes: createdQuote.notes,
             serviceType: laborType,
-            validDays: 30,
           }}
         />
       )}
