@@ -40,9 +40,6 @@ import {
   ChevronDown,
   Check,
   Download,
-  Eye,
-  Printer,
-  Building2,
 } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import { Badge, Button, Input, Select, useToast } from '@/components/ui';
@@ -51,6 +48,7 @@ import { getSupabaseBrowserClient } from '@/lib/supabase';
 import { CrmClient, CrmColumn } from './types';
 import { STATUS_LABELS, CRM_STAGES } from '@/lib/constants';
 import { ChecklistGroup, HVAC_DIAGNOSTIC_CHECKLIST, HVAC_ENTRETIEN_CHECKLIST } from '@/lib/checklists';
+import { generateQuotePdf, QuotePdfData } from '@/lib/pdf/quote-pdf';
 
 type ClientAppointment = {
   id: string;
@@ -221,6 +219,7 @@ export default function CrmCardModal({
     }>;
   } | null>(null);
   const [quoteSending, setQuoteSending] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
 
   // Timeline email
   const [timelineSending, setTimelineSending] = useState(false);
@@ -616,7 +615,7 @@ export default function CrmCardModal({
         toast.addToast(`Devis ${response.quote.quote_number} créé`, 'success');
 
         // Store created quote for preview - ensure all fields are present
-        setCreatedQuote({
+        const quoteData = {
           id: response.quote.id,
           quote_number: response.quote.quote_number,
           labor_total: response.quote.labor_total || 0,
@@ -627,7 +626,43 @@ export default function CrmCardModal({
           notes: response.quote.notes,
           expires_at: response.quote.expires_at || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
           quote_items: response.quote.quote_items || [],
-        });
+        };
+        setCreatedQuote(quoteData);
+
+        // Generate PDF for preview
+        try {
+          const pdfData: QuotePdfData = {
+            quoteNumber: quoteData.quote_number,
+            createdAt: new Date().toISOString(),
+            validUntil: quoteData.expires_at,
+            client: {
+              name: client.name,
+              email: client.email || undefined,
+              phone: client.phone || undefined,
+              address: clientAddress || undefined,
+              trackingId: trackingId,
+            },
+            items: quoteData.quote_items.map(item => ({
+              description: item.label + (item.description ? ` - ${item.description}` : ''),
+              quantity: item.quantity,
+              unitPrice: item.unit_price,
+              total: item.line_total,
+            })),
+            subtotal: quoteData.labor_total + quoteData.parts_total,
+            taxRate: quoteData.tax_rate,
+            taxAmount: quoteData.tax_amount,
+            total: quoteData.total,
+            notes: quoteData.notes,
+            serviceType: laborType || undefined,
+          };
+          const pdfBuffer = generateQuotePdf(pdfData);
+          const blob = new Blob([pdfBuffer], { type: 'application/pdf' });
+          const url = URL.createObjectURL(blob);
+          setPdfUrl(url);
+        } catch (pdfError) {
+          console.error('[CRM] PDF generation failed', pdfError);
+          // Continue without PDF, will show HTML fallback
+        }
 
         // Close form, open preview
         setShowQuoteForm(false);
@@ -747,6 +782,11 @@ export default function CrmCardModal({
   const handleCloseQuotePreview = () => {
     setShowQuotePreview(false);
     setCreatedQuote(null);
+    // Clean up PDF URL to prevent memory leaks
+    if (pdfUrl) {
+      URL.revokeObjectURL(pdfUrl);
+      setPdfUrl(null);
+    }
     // Reset form
     setQuoteDescription('');
     setQuoteAmount('');
@@ -2050,122 +2090,43 @@ export default function CrmCardModal({
         </div>
       </Modal>
 
-      {/* Quote Preview Modal (PDF-like) */}
+      {/* Quote Preview Modal (PDF Viewer) */}
       <Modal
         isOpen={showQuotePreview}
         onClose={handleCloseQuotePreview}
-        title="Prévisualisation du devis"
+        title={`Devis ${createdQuote?.quote_number || ''}`}
         size="4xl"
       >
         {createdQuote && (
           <div className="space-y-4">
-            {/* PDF Preview Container */}
-            <div className="bg-white border border-gray-300 rounded-lg shadow-lg mx-auto max-w-[210mm] p-8" style={{ fontFamily: 'Arial, sans-serif' }}>
-              {/* Header */}
-              <div className="flex justify-between items-start border-b-2 border-airPrimary pb-4 mb-6">
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-10 h-10 bg-airPrimary rounded-lg flex items-center justify-center">
-                      <Snowflake className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <h1 className="text-xl font-bold text-airDark">AIR COOLING SERVICES</h1>
-                      <p className="text-xs text-airMuted">Climatisation & Chauffage</p>
-                    </div>
-                  </div>
-                  <div className="text-xs text-airMuted space-y-0.5 mt-3">
-                    <p className="flex items-center gap-1"><Building2 className="w-3 h-3" /> Rue de l&apos;Industrie 45</p>
-                    <p>1000 Bruxelles, Belgique</p>
-                    <p>TVA: BE0123.456.789</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="bg-airPrimary text-white px-4 py-2 rounded-lg mb-2">
-                    <p className="text-xs uppercase tracking-wide">Devis N°</p>
-                    <p className="text-lg font-bold">{createdQuote.quote_number}</p>
-                  </div>
-                  <p className="text-xs text-airMuted">
-                    Date: {new Date().toLocaleDateString('fr-FR')}
-                  </p>
-                  <p className="text-xs text-airMuted">
-                    Valide jusqu&apos;au: {new Date(createdQuote.expires_at).toLocaleDateString('fr-FR')}
-                  </p>
+            {/* PDF Viewer */}
+            {pdfUrl ? (
+              <div className="bg-gray-100 rounded-lg overflow-hidden" style={{ height: '70vh' }}>
+                <iframe
+                  src={pdfUrl}
+                  className="w-full h-full border-0"
+                  title={`Devis ${createdQuote.quote_number}`}
+                />
+              </div>
+            ) : (
+              <div className="bg-gray-100 rounded-lg flex items-center justify-center" style={{ height: '70vh' }}>
+                <div className="text-center text-airMuted">
+                  <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
+                  <p>Génération du PDF...</p>
                 </div>
               </div>
+            )}
 
-              {/* Client Info */}
-              <div className="bg-airSurface/50 rounded-lg p-4 mb-6">
-                <p className="text-xs text-airMuted uppercase tracking-wide mb-1">Client</p>
+            {/* Quote Summary */}
+            <div className="bg-airSurface/50 rounded-lg p-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm text-airMuted">Total TTC</p>
+                <p className="text-2xl font-bold text-airPrimary">{createdQuote.total.toFixed(2)} €</p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-airMuted">Client</p>
                 <p className="font-semibold text-airDark">{client?.name}</p>
-                {clientAddress && <p className="text-sm text-airMuted">{clientAddress}</p>}
                 {client?.email && <p className="text-sm text-airMuted">{client.email}</p>}
-                {client?.phone && <p className="text-sm text-airMuted">{client.phone}</p>}
-              </div>
-
-              {/* Quote Items Table */}
-              <table className="w-full mb-6">
-                <thead>
-                  <tr className="bg-airPrimary/10">
-                    <th className="text-left py-2 px-3 text-xs font-semibold text-airDark uppercase">Description</th>
-                    <th className="text-center py-2 px-3 text-xs font-semibold text-airDark uppercase w-20">Qté</th>
-                    <th className="text-right py-2 px-3 text-xs font-semibold text-airDark uppercase w-24">Prix unit.</th>
-                    <th className="text-right py-2 px-3 text-xs font-semibold text-airDark uppercase w-24">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {createdQuote.quote_items?.map((item, index) => (
-                    <tr key={index} className="border-b border-airBorder/50">
-                      <td className="py-3 px-3">
-                        <p className="text-sm font-medium text-airDark">{item.label}</p>
-                        {item.description && (
-                          <p className="text-xs text-airMuted">{item.description}</p>
-                        )}
-                        <Badge size="sm" className={`mt-1 ${item.kind === 'labor' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
-                          {item.kind === 'labor' ? 'Main d\'oeuvre' : 'Pièce'}
-                        </Badge>
-                      </td>
-                      <td className="py-3 px-3 text-center text-sm">{item.quantity}</td>
-                      <td className="py-3 px-3 text-right text-sm">{item.unit_price.toFixed(2)} €</td>
-                      <td className="py-3 px-3 text-right text-sm font-medium">{item.line_total.toFixed(2)} €</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {/* Totals */}
-              <div className="flex justify-end mb-6">
-                <div className="w-64 space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-airMuted">Sous-total HT</span>
-                    <span className="font-medium">{(createdQuote.labor_total + createdQuote.parts_total).toFixed(2)} €</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-airMuted">TVA ({createdQuote.tax_rate}%)</span>
-                    <span>{createdQuote.tax_amount.toFixed(2)} €</span>
-                  </div>
-                  <div className="flex justify-between pt-2 border-t-2 border-airPrimary">
-                    <span className="text-lg font-bold text-airDark">Total TTC</span>
-                    <span className="text-xl font-bold text-airPrimary">{createdQuote.total.toFixed(2)} €</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Notes */}
-              {createdQuote.notes && (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
-                  <p className="text-xs text-amber-700 uppercase tracking-wide mb-1">Notes</p>
-                  <p className="text-sm text-amber-800">{createdQuote.notes}</p>
-                </div>
-              )}
-
-              {/* Footer */}
-              <div className="border-t border-airBorder pt-4 text-center">
-                <p className="text-xs text-airMuted">
-                  Ce devis est valable 30 jours. Pour accepter, merci de nous contacter.
-                </p>
-                <p className="text-xs text-airMuted mt-1">
-                  Air Cooling Services - Tél: +32 2 123 45 67 - contact@aircooling.be
-                </p>
               </div>
             </div>
 
@@ -2182,9 +2143,14 @@ export default function CrmCardModal({
                 variant="ghost"
                 icon={<Download className="w-4 h-4" />}
                 onClick={() => {
-                  // For now, just open print dialog which can save as PDF
-                  window.print();
+                  if (pdfUrl) {
+                    const a = document.createElement('a');
+                    a.href = pdfUrl;
+                    a.download = `devis-${createdQuote.quote_number}.pdf`;
+                    a.click();
+                  }
                 }}
+                disabled={!pdfUrl}
                 className="flex-1"
               >
                 Télécharger PDF
