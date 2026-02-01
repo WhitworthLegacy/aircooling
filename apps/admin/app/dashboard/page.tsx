@@ -13,6 +13,7 @@ import {
   FileText,
   Euro,
   CheckCircle,
+  ChevronDown,
 } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
 import { Card, Badge, Button } from '@/components/ui';
@@ -51,8 +52,23 @@ export default function DashboardPage() {
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [interventionsToday, setInterventionsToday] = useState(0);
 
+  // Month selector state
+  const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7));
+
   const today = new Date().toISOString().split('T')[0];
-  const currentMonth = new Date().toISOString().slice(0, 7);
+
+  // Generate list of last 12 months for selector
+  const monthOptions = useMemo(() => {
+    const months = [];
+    const now = new Date();
+    for (let i = 0; i < 12; i++) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const value = date.toISOString().slice(0, 7);
+      const label = date.toLocaleDateString('fr-BE', { month: 'long', year: 'numeric' });
+      months.push({ value, label });
+    }
+    return months;
+  }, []);
 
   useEffect(() => {
     const loadSummary = async () => {
@@ -125,16 +141,20 @@ export default function DashboardPage() {
       c.stage === CRM_STAGES.TERMINE && !c.workflow_state?.is_paid
     ).length;
 
-    const monthQuotes = quotes.filter((q) => q.created_at?.startsWith(currentMonth));
+    const monthQuotes = quotes.filter((q) => q.created_at?.startsWith(selectedMonth));
     const acceptedQuotes = monthQuotes.filter((q) => q.status === 'accepted');
+    const sentQuotes = monthQuotes.filter((q) => q.status === 'sent');
+    const draftQuotes = monthQuotes.filter((q) => q.status === 'draft');
     const acceptedAmount = acceptedQuotes.reduce((sum, q) => sum + (q.total_amount || 0), 0);
     const conversionRate = monthQuotes.length > 0
       ? Math.round((acceptedQuotes.length / monthQuotes.length) * 100) : 0;
 
-    return { inIntervention, terminated, awaitingPayment, acceptedAmount, conversionRate,
-      monthQuotesCount: monthQuotes.length, acceptedQuotesCount: acceptedQuotes.length };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clients, quotes, currentMonth]);
+    return {
+      inIntervention, terminated, awaitingPayment, acceptedAmount, conversionRate,
+      monthQuotesCount: monthQuotes.length, acceptedQuotesCount: acceptedQuotes.length,
+      sentQuotesCount: sentQuotes.length, draftQuotesCount: draftQuotes.length,
+    };
+  }, [clients, quotes, selectedMonth]);
 
   const stats = useMemo(() => [
     {
@@ -144,10 +164,10 @@ export default function DashboardPage() {
       icon: Calendar, color: 'bg-airPrimary/10 text-airPrimary', href: '/dashboard/appointments',
     },
     ...(canAccessClients ? [{
-      name: 'Interventions', value: kpis.inIntervention.toString(),
-      change: kpis.awaitingPayment > 0 ? `${kpis.awaitingPayment} à encaisser` : 'Tous payés',
-      changeType: kpis.inIntervention > 0 ? 'warning' : 'neutral',
-      icon: Wrench, color: 'bg-purple-50 text-purple-600', href: '/dashboard/interventions',
+      name: 'Devis', value: kpis.monthQuotesCount.toString(),
+      change: kpis.acceptedQuotesCount > 0 ? `${kpis.acceptedQuotesCount} accepté(s)` : (kpis.sentQuotesCount > 0 ? `${kpis.sentQuotesCount} en attente` : 'Aucun ce mois'),
+      changeType: kpis.acceptedQuotesCount > 0 ? 'positive' : (kpis.sentQuotesCount > 0 ? 'warning' : 'neutral'),
+      icon: FileText, color: 'bg-purple-50 text-purple-600', href: '/dashboard/devis',
     }] : []),
     ...(canAccessClients ? [{
       name: 'Alertes stock', value: stockAlerts.toString(),
@@ -220,11 +240,22 @@ export default function DashboardPage() {
               <div className="p-6 border-b border-airBorder">
                 <div className="flex items-center justify-between">
                   <h2 className="text-lg font-semibold text-airDark flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5 text-airPrimary" /> Performance du mois
+                    <TrendingUp className="w-5 h-5 text-airPrimary" /> Performance
                   </h2>
-                  <Badge variant="accent">
-                    {new Date().toLocaleDateString('fr-BE', { month: 'long', year: 'numeric' })}
-                  </Badge>
+                  <div className="relative">
+                    <select
+                      value={selectedMonth}
+                      onChange={(e) => setSelectedMonth(e.target.value)}
+                      className="appearance-none pl-4 pr-10 py-2 rounded-xl bg-gradient-to-r from-airPrimary/10 to-airAccent/10 border border-airPrimary/20 text-sm font-semibold text-airDark cursor-pointer hover:border-airPrimary/40 focus:outline-none focus:ring-2 focus:ring-airPrimary/30 transition capitalize"
+                    >
+                      {monthOptions.map((opt) => (
+                        <option key={opt.value} value={opt.value} className="capitalize">
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-airPrimary pointer-events-none" />
+                  </div>
                 </div>
               </div>
               <div className="p-6">
