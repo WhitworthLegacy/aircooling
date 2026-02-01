@@ -6,18 +6,26 @@ import {
   Text,
   View,
   StyleSheet,
+  Svg,
+  Defs,
+  LinearGradient,
+  Stop,
+  Rect,
 } from "@react-pdf/renderer";
 
 // AirCooling Brand Colors
 const COLORS = {
   primary: "#1B3B8A",
+  primaryLight: "#2E5BB8",
+  primaryDark: "#0F2654",
   accent: "#FF6B35",
+  accentLight: "#FF8A5B",
   dark: "#293133",
   muted: "#64748b",
   lightGray: "#f1f5f9",
   white: "#FFFFFF",
-  lightBlue: "#e0f4ff",
-  lightOrange: "#fff3e0",
+  lightBlue: "#e8f4fc",
+  lightOrange: "#fff7f0",
 };
 
 const styles = StyleSheet.create({
@@ -26,167 +34,226 @@ const styles = StyleSheet.create({
     fontFamily: "Helvetica",
     fontSize: 10,
     color: COLORS.dark,
+    backgroundColor: COLORS.white,
   },
-  headerBand: {
-    height: 12,
-    backgroundColor: COLORS.primary,
+  // Header with gradient simulation
+  headerWrapper: {
+    position: "relative",
+    height: 100,
   },
-  headerBandAccent: {
-    height: 6,
-    backgroundColor: COLORS.accent,
+  headerGradient: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 100,
   },
   headerContent: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
+    alignItems: "center",
     paddingHorizontal: 40,
     paddingTop: 25,
     paddingBottom: 20,
+    height: 100,
+  },
+  logoContainer: {
+    flexDirection: "column",
   },
   logoText: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: "bold",
-    color: COLORS.primary,
+    color: COLORS.white,
+    letterSpacing: 1,
   },
   logoAccent: {
-    color: COLORS.accent,
+    color: COLORS.accentLight,
   },
   logoSubtext: {
     fontSize: 10,
-    color: COLORS.muted,
-    marginTop: 2,
+    color: "rgba(255,255,255,0.85)",
+    marginTop: 4,
+    letterSpacing: 2,
   },
   headerRight: {
     alignItems: "flex-end",
   },
   quoteNumberBadge: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 6,
-    marginBottom: 8,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.4)",
   },
   quoteNumberText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: "bold",
     color: COLORS.white,
+    letterSpacing: 1,
   },
   quoteDate: {
-    fontSize: 9,
-    color: COLORS.muted,
-    marginTop: 2,
+    fontSize: 10,
+    color: "rgba(255,255,255,0.85)",
+    marginTop: 8,
+  },
+  // Accent bar under header
+  accentBar: {
+    height: 6,
+    backgroundColor: COLORS.accent,
   },
   content: {
     paddingHorizontal: 40,
-    paddingTop: 10,
+    paddingTop: 25,
   },
   section: {
-    marginBottom: 18,
+    marginBottom: 20,
   },
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: 12,
   },
-  sectionTitle: {
+  sectionIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    backgroundColor: COLORS.primary,
+    marginRight: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  sectionIconText: {
+    color: COLORS.white,
     fontSize: 12,
     fontWeight: "bold",
+  },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: "bold",
     color: COLORS.primary,
+    textTransform: "uppercase",
+    letterSpacing: 1,
   },
   sectionDivider: {
-    height: 2,
+    height: 3,
     backgroundColor: COLORS.accent,
-    marginTop: 5,
+    width: 50,
+    marginTop: 4,
+    borderRadius: 2,
   },
-  clientInfo: {
+  // Client info card
+  clientCard: {
     backgroundColor: COLORS.lightBlue,
-    padding: 15,
-    borderRadius: 6,
-    borderLeftWidth: 4,
+    padding: 18,
+    borderRadius: 10,
+    borderLeftWidth: 5,
     borderLeftColor: COLORS.primary,
   },
   clientRow: {
     flexDirection: "row",
-    marginBottom: 6,
+    marginBottom: 8,
   },
   clientLabel: {
-    width: 80,
+    width: 85,
     fontWeight: "bold",
     color: COLORS.primary,
     fontSize: 9,
+    textTransform: "uppercase",
   },
   clientValue: {
     flex: 1,
     color: COLORS.dark,
-    fontSize: 10,
+    fontSize: 11,
   },
-  serviceType: {
-    marginTop: 10,
-    padding: 8,
-    backgroundColor: COLORS.lightOrange,
-    borderRadius: 4,
+  serviceTypeBadge: {
+    marginTop: 12,
+    alignSelf: "flex-start",
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    backgroundColor: COLORS.accent,
+    borderRadius: 20,
   },
   serviceTypeText: {
     fontSize: 10,
     fontWeight: "bold",
-    color: COLORS.accent,
+    color: COLORS.white,
     textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
+  // Table
   table: {
-    marginTop: 8,
-    borderRadius: 6,
+    marginTop: 10,
+    borderRadius: 8,
     overflow: "hidden",
-    borderWidth: 1,
-    borderColor: COLORS.lightGray,
   },
   tableHeader: {
     flexDirection: "row",
     backgroundColor: COLORS.primary,
-    padding: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
   },
   tableHeaderText: {
     color: COLORS.white,
     fontWeight: "bold",
     fontSize: 9,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   tableRow: {
     flexDirection: "row",
-    padding: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.lightGray,
+    borderBottomColor: "#e2e8f0",
     backgroundColor: COLORS.white,
   },
   tableRowAlt: {
     flexDirection: "row",
-    padding: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.lightGray,
-    backgroundColor: COLORS.lightGray,
+    borderBottomColor: "#e2e8f0",
+    backgroundColor: "#f8fafc",
   },
   colDescription: {
     flex: 3,
   },
   colKind: {
-    width: 70,
+    width: 65,
   },
   colQty: {
     width: 40,
     textAlign: "center",
   },
   colPrice: {
-    width: 60,
+    width: 65,
     textAlign: "right",
   },
   colTotal: {
-    width: 70,
+    width: 75,
     textAlign: "right",
     fontWeight: "bold",
   },
+  itemLabel: {
+    fontSize: 10,
+    color: COLORS.dark,
+  },
+  itemDescription: {
+    fontSize: 8,
+    color: COLORS.muted,
+    marginTop: 2,
+  },
   kindBadge: {
-    fontSize: 7,
-    paddingHorizontal: 4,
-    paddingVertical: 2,
-    borderRadius: 3,
+    fontSize: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 4,
+    textAlign: "center",
   },
   kindLabor: {
     backgroundColor: "#dbeafe",
@@ -196,36 +263,50 @@ const styles = StyleSheet.create({
     backgroundColor: "#dcfce7",
     color: "#166534",
   },
+  // Total section
   totalSection: {
-    marginTop: 15,
+    marginTop: 20,
     alignItems: "flex-end",
   },
-  totalBox: {
+  totalCard: {
+    width: 240,
+    borderRadius: 10,
+    overflow: "hidden",
+  },
+  totalCardHeader: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  totalCardHeaderText: {
+    color: COLORS.white,
+    fontSize: 10,
+    fontWeight: "bold",
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  totalCardBody: {
     backgroundColor: COLORS.lightOrange,
-    padding: 15,
-    borderRadius: 8,
-    borderWidth: 3,
-    borderColor: COLORS.accent,
-    width: 220,
+    padding: 16,
   },
   totalRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 5,
+    marginBottom: 8,
   },
   totalLabel: {
-    color: COLORS.dark,
+    color: COLORS.muted,
     fontSize: 10,
   },
   totalValue: {
-    fontWeight: "bold",
+    color: COLORS.dark,
     fontSize: 10,
   },
   grandTotalRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 8,
-    paddingTop: 8,
+    marginTop: 10,
+    paddingTop: 12,
     borderTopWidth: 2,
     borderTopColor: COLORS.accent,
   },
@@ -235,72 +316,95 @@ const styles = StyleSheet.create({
     color: COLORS.dark,
   },
   grandTotalValue: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "bold",
     color: COLORS.accent,
   },
-  notes: {
-    marginTop: 15,
-    padding: 12,
-    backgroundColor: "#fef3c7",
-    borderRadius: 6,
+  // Notes
+  notesCard: {
+    marginTop: 20,
+    padding: 14,
+    backgroundColor: "#fef9c3",
+    borderRadius: 8,
     borderLeftWidth: 4,
-    borderLeftColor: COLORS.accent,
+    borderLeftColor: "#eab308",
   },
   notesTitle: {
     fontSize: 10,
     fontWeight: "bold",
-    color: COLORS.accent,
-    marginBottom: 5,
+    color: "#a16207",
+    marginBottom: 6,
+    textTransform: "uppercase",
   },
   notesText: {
     fontSize: 9,
-    color: COLORS.muted,
-    lineHeight: 1.4,
+    color: "#78716c",
+    lineHeight: 1.5,
   },
-  validUntil: {
+  // Valid until
+  validCard: {
     marginTop: 20,
-    padding: 14,
+    padding: 16,
     backgroundColor: COLORS.lightBlue,
-    borderRadius: 6,
-    textAlign: "center",
-    borderLeftWidth: 4,
-    borderLeftColor: COLORS.primary,
+    borderRadius: 8,
+    alignItems: "center",
   },
-  validUntilText: {
+  validIcon: {
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  validText: {
     fontSize: 10,
     color: COLORS.primary,
+    fontWeight: "bold",
   },
+  // Footer
   footer: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
   },
-  footerBand: {
-    height: 6,
-    backgroundColor: COLORS.accent,
-  },
-  footerBandPrimary: {
-    height: 12,
-    backgroundColor: COLORS.primary,
-  },
   footerContent: {
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 40,
     backgroundColor: COLORS.lightGray,
   },
-  footerText: {
-    textAlign: "center",
+  footerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  footerCompany: {
+    fontSize: 9,
+    color: COLORS.dark,
+    fontWeight: "bold",
+  },
+  footerAddress: {
     fontSize: 8,
     color: COLORS.muted,
+    marginTop: 2,
   },
   footerContact: {
-    textAlign: "center",
-    fontSize: 9,
+    alignItems: "flex-end",
+  },
+  footerPhone: {
+    fontSize: 10,
     color: COLORS.primary,
-    marginTop: 3,
     fontWeight: "bold",
+  },
+  footerEmail: {
+    fontSize: 8,
+    color: COLORS.muted,
+    marginTop: 2,
+  },
+  footerBar: {
+    height: 8,
+    backgroundColor: COLORS.primary,
+  },
+  footerAccentBar: {
+    height: 4,
+    backgroundColor: COLORS.accent,
   },
 });
 
@@ -339,63 +443,79 @@ export function QuotePDF({ data }: { data: QuotePDFData }) {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        {/* Header Bands */}
-        <View style={styles.headerBand} />
-        <View style={styles.headerBandAccent} />
-
-        {/* Header Content */}
-        <View style={styles.headerContent}>
-          <View>
-            <Text style={styles.logoText}>
-              Air<Text style={styles.logoAccent}>cooling</Text>
-            </Text>
-            <Text style={styles.logoSubtext}>Climatisation & Chauffage</Text>
-          </View>
-          <View style={styles.headerRight}>
-            <View style={styles.quoteNumberBadge}>
-              <Text style={styles.quoteNumberText}>
-                DEVIS {data.quoteNumber}
+        {/* Header with SVG Gradient */}
+        <View style={styles.headerWrapper}>
+          <Svg style={styles.headerGradient} viewBox="0 0 595 100">
+            <Defs>
+              <LinearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <Stop offset="0%" stopColor={COLORS.primaryDark} />
+                <Stop offset="50%" stopColor={COLORS.primary} />
+                <Stop offset="100%" stopColor={COLORS.primaryLight} />
+              </LinearGradient>
+            </Defs>
+            <Rect x="0" y="0" width="595" height="100" fill="url(#headerGrad)" />
+          </Svg>
+          <View style={styles.headerContent}>
+            <View style={styles.logoContainer}>
+              <Text style={styles.logoText}>
+                Air<Text style={styles.logoAccent}>cooling</Text>
+              </Text>
+              <Text style={styles.logoSubtext}>CLIMATISATION & CHAUFFAGE</Text>
+            </View>
+            <View style={styles.headerRight}>
+              <View style={styles.quoteNumberBadge}>
+                <Text style={styles.quoteNumberText}>DEVIS {data.quoteNumber}</Text>
+              </View>
+              <Text style={styles.quoteDate}>
+                {today.toLocaleDateString("fr-BE", {
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                })}
               </Text>
             </View>
-            <Text style={styles.quoteDate}>
-              Date: {today.toLocaleDateString("fr-BE")}
-            </Text>
           </View>
         </View>
+        <View style={styles.accentBar} />
 
         {/* Content */}
         <View style={styles.content}>
           {/* Client Info */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>INFORMATIONS CLIENT</Text>
+              <View style={styles.sectionIcon}>
+                <Text style={styles.sectionIconText}>👤</Text>
+              </View>
+              <View>
+                <Text style={styles.sectionTitle}>Informations Client</Text>
+                <View style={styles.sectionDivider} />
+              </View>
             </View>
-            <View style={styles.sectionDivider} />
-            <View style={[styles.clientInfo, { marginTop: 10 }]}>
+            <View style={styles.clientCard}>
               <View style={styles.clientRow}>
-                <Text style={styles.clientLabel}>Nom:</Text>
+                <Text style={styles.clientLabel}>Nom</Text>
                 <Text style={styles.clientValue}>{data.clientName}</Text>
               </View>
               {data.clientPhone && (
                 <View style={styles.clientRow}>
-                  <Text style={styles.clientLabel}>Téléphone:</Text>
+                  <Text style={styles.clientLabel}>Téléphone</Text>
                   <Text style={styles.clientValue}>{data.clientPhone}</Text>
                 </View>
               )}
               {data.clientEmail && (
                 <View style={styles.clientRow}>
-                  <Text style={styles.clientLabel}>Email:</Text>
+                  <Text style={styles.clientLabel}>Email</Text>
                   <Text style={styles.clientValue}>{data.clientEmail}</Text>
                 </View>
               )}
               {data.clientAddress && (
                 <View style={styles.clientRow}>
-                  <Text style={styles.clientLabel}>Adresse:</Text>
+                  <Text style={styles.clientLabel}>Adresse</Text>
                   <Text style={styles.clientValue}>{data.clientAddress}</Text>
                 </View>
               )}
               {data.serviceType && (
-                <View style={styles.serviceType}>
+                <View style={styles.serviceTypeBadge}>
                   <Text style={styles.serviceTypeText}>{data.serviceType}</Text>
                 </View>
               )}
@@ -405,24 +525,23 @@ export function QuotePDF({ data }: { data: QuotePDFData }) {
           {/* Items Table */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>DETAIL DU DEVIS</Text>
+              <View style={styles.sectionIcon}>
+                <Text style={styles.sectionIconText}>📋</Text>
+              </View>
+              <View>
+                <Text style={styles.sectionTitle}>Détail du Devis</Text>
+                <View style={styles.sectionDivider} />
+              </View>
             </View>
-            <View style={styles.sectionDivider} />
-            <View style={[styles.table, { marginTop: 10 }]}>
+            <View style={styles.table}>
               <View style={styles.tableHeader}>
                 <Text style={[styles.colDescription, styles.tableHeaderText]}>
                   Description
                 </Text>
-                <Text style={[styles.colKind, styles.tableHeaderText]}>
-                  Type
-                </Text>
+                <Text style={[styles.colKind, styles.tableHeaderText]}>Type</Text>
                 <Text style={[styles.colQty, styles.tableHeaderText]}>Qté</Text>
-                <Text style={[styles.colPrice, styles.tableHeaderText]}>
-                  P.U.
-                </Text>
-                <Text style={[styles.colTotal, styles.tableHeaderText]}>
-                  Total
-                </Text>
+                <Text style={[styles.colPrice, styles.tableHeaderText]}>P.U. HT</Text>
+                <Text style={[styles.colTotal, styles.tableHeaderText]}>Total HT</Text>
               </View>
               {data.items.map((item, index) => (
                 <View
@@ -430,11 +549,9 @@ export function QuotePDF({ data }: { data: QuotePDFData }) {
                   style={index % 2 === 0 ? styles.tableRow : styles.tableRowAlt}
                 >
                   <View style={styles.colDescription}>
-                    <Text>{item.label}</Text>
+                    <Text style={styles.itemLabel}>{item.label}</Text>
                     {item.description && (
-                      <Text style={{ fontSize: 8, color: COLORS.muted }}>
-                        {item.description}
-                      </Text>
+                      <Text style={styles.itemDescription}>{item.description}</Text>
                     )}
                   </View>
                   <View style={styles.colKind}>
@@ -444,40 +561,35 @@ export function QuotePDF({ data }: { data: QuotePDFData }) {
                         item.kind === "labor" ? styles.kindLabor : styles.kindPart,
                       ]}
                     >
-                      {item.kind === "labor" ? "M.O." : "Pièce"}
+                      {item.kind === "labor" ? "Main d'œuvre" : "Pièce"}
                     </Text>
                   </View>
                   <Text style={styles.colQty}>{item.quantity}</Text>
-                  <Text style={styles.colPrice}>
-                    {item.unit_price.toFixed(2)}€
-                  </Text>
-                  <Text style={styles.colTotal}>
-                    {item.line_total.toFixed(2)}€
-                  </Text>
+                  <Text style={styles.colPrice}>{item.unit_price.toFixed(2)} €</Text>
+                  <Text style={styles.colTotal}>{item.line_total.toFixed(2)} €</Text>
                 </View>
               ))}
             </View>
 
-            {/* Total */}
+            {/* Total Card */}
             <View style={styles.totalSection}>
-              <View style={styles.totalBox}>
-                <View style={styles.totalRow}>
-                  <Text style={styles.totalLabel}>Sous-total HT:</Text>
-                  <Text style={styles.totalValue}>{subtotal.toFixed(2)}€</Text>
+              <View style={styles.totalCard}>
+                <View style={styles.totalCardHeader}>
+                  <Text style={styles.totalCardHeaderText}>Récapitulatif</Text>
                 </View>
-                <View style={styles.totalRow}>
-                  <Text style={styles.totalLabel}>
-                    TVA ({data.taxRate}%):
-                  </Text>
-                  <Text style={styles.totalValue}>
-                    {data.taxAmount.toFixed(2)}€
-                  </Text>
-                </View>
-                <View style={styles.grandTotalRow}>
-                  <Text style={styles.grandTotalLabel}>TOTAL TTC</Text>
-                  <Text style={styles.grandTotalValue}>
-                    {data.total.toFixed(2)}€
-                  </Text>
+                <View style={styles.totalCardBody}>
+                  <View style={styles.totalRow}>
+                    <Text style={styles.totalLabel}>Sous-total HT</Text>
+                    <Text style={styles.totalValue}>{subtotal.toFixed(2)} €</Text>
+                  </View>
+                  <View style={styles.totalRow}>
+                    <Text style={styles.totalLabel}>TVA ({data.taxRate}%)</Text>
+                    <Text style={styles.totalValue}>{data.taxAmount.toFixed(2)} €</Text>
+                  </View>
+                  <View style={styles.grandTotalRow}>
+                    <Text style={styles.grandTotalLabel}>TOTAL TTC</Text>
+                    <Text style={styles.grandTotalValue}>{data.total.toFixed(2)} €</Text>
+                  </View>
                 </View>
               </View>
             </View>
@@ -485,16 +597,16 @@ export function QuotePDF({ data }: { data: QuotePDFData }) {
 
           {/* Notes */}
           {data.notes && (
-            <View style={styles.notes}>
-              <Text style={styles.notesTitle}>Remarques:</Text>
+            <View style={styles.notesCard}>
+              <Text style={styles.notesTitle}>📝 Remarques</Text>
               <Text style={styles.notesText}>{data.notes}</Text>
             </View>
           )}
 
           {/* Valid Until */}
-          <View style={styles.validUntil}>
-            <Text style={styles.validUntilText}>
-              Ce devis est valable jusqu'au{" "}
+          <View style={styles.validCard}>
+            <Text style={styles.validText}>
+              ✓ Ce devis est valable jusqu'au{" "}
               {validUntil.toLocaleDateString("fr-BE", {
                 day: "numeric",
                 month: "long",
@@ -506,16 +618,22 @@ export function QuotePDF({ data }: { data: QuotePDFData }) {
 
         {/* Footer */}
         <View style={styles.footer} fixed>
-          <View style={styles.footerBand} />
+          <View style={styles.footerAccentBar} />
           <View style={styles.footerContent}>
-            <Text style={styles.footerText}>
-              Air Cooling Services - Rue de Belgrade 75, 1190 Forest
-            </Text>
-            <Text style={styles.footerContact}>
-              Tel: 02 725 33 85 | info@aircooling.be
-            </Text>
+            <View style={styles.footerRow}>
+              <View>
+                <Text style={styles.footerCompany}>Air Cooling Services</Text>
+                <Text style={styles.footerAddress}>
+                  Rue de Belgrade 75, 1190 Forest, Belgique
+                </Text>
+              </View>
+              <View style={styles.footerContact}>
+                <Text style={styles.footerPhone}>📞 02 725 33 85</Text>
+                <Text style={styles.footerEmail}>info@aircooling.be</Text>
+              </View>
+            </View>
           </View>
-          <View style={styles.footerBandPrimary} />
+          <View style={styles.footerBar} />
         </View>
       </Page>
     </Document>
