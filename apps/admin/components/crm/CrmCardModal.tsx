@@ -227,6 +227,12 @@ export default function CrmCardModal({
   } | null>(null);
   const [quoteSending, setQuoteSending] = useState(false);
 
+  // Quick quote state (new simplified flow)
+  const [showQuickQuote, setShowQuickQuote] = useState(false);
+  const [quickQuoteAmount, setQuickQuoteAmount] = useState('');
+  const [quickQuoteDesc, setQuickQuoteDesc] = useState('');
+  const [quickQuoteLoading, setQuickQuoteLoading] = useState(false);
+
   // Timeline email
   const [timelineSending, setTimelineSending] = useState(false);
 
@@ -770,6 +776,96 @@ export default function CrmCardModal({
     setPartsSearch('');
   };
 
+  // Quick quote creation (simplified flow - no form submission)
+  const handleQuickQuote = async () => {
+    if (!client?.id) return;
+
+    const amount = parseFloat(quickQuoteAmount);
+    if (!amount || amount <= 0) {
+      toast.addToast("Montant requis", 'warning');
+      return;
+    }
+
+    setQuickQuoteLoading(true);
+    try {
+      type QuoteResponse = {
+        success: boolean;
+        quote?: {
+          id: string;
+          quote_number: string;
+          labor_total: number;
+          parts_total: number;
+          tax_rate: number;
+          tax_amount: number;
+          total: number;
+          notes?: string;
+          expires_at: string;
+          quote_items: Array<{
+            kind: string;
+            label: string;
+            description?: string;
+            quantity: number;
+            unit_price: number;
+            line_total: number;
+          }>;
+        };
+      };
+
+      const response = await apiFetch<QuoteResponse>('/api/admin/quotes', {
+        method: 'POST',
+        body: JSON.stringify({
+          client_id: client.id,
+          labor_type: 'installation',
+          labor_hours: 0,
+          labor_rate: 65,
+          selected_parts: [],
+          items: [{
+            kind: 'labor',
+            description: quickQuoteDesc || 'Prestation',
+            quantity: 1,
+            unit_price: amount,
+          }],
+          service_type: 'installation',
+          notes: quickQuoteDesc || null,
+        }),
+      });
+
+      if (response.success && response.quote) {
+        toast.addToast(`Devis ${response.quote.quote_number} créé`, 'success');
+
+        // Store quote data
+        const quoteData = {
+          id: response.quote.id,
+          quote_number: response.quote.quote_number,
+          labor_total: response.quote.labor_total || 0,
+          parts_total: response.quote.parts_total || 0,
+          tax_rate: response.quote.tax_rate || 21,
+          tax_amount: response.quote.tax_amount || 0,
+          total: response.quote.total || 0,
+          notes: response.quote.notes,
+          expires_at: response.quote.expires_at || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          quote_items: response.quote.quote_items || [],
+        };
+
+        // Close quick quote modal, set data, open preview
+        setShowQuickQuote(false);
+        setCreatedQuote(quoteData);
+        setShowQuotePreview(true);
+
+        // Reset quick quote form
+        setQuickQuoteAmount('');
+        setQuickQuoteDesc('');
+      } else {
+        toast.addToast("Erreur: devis non créé", 'error');
+      }
+    } catch (error) {
+      console.error('[CRM] quick quote failed', error);
+      toast.addToast("Erreur création devis", 'error');
+    } finally {
+      setQuickQuoteLoading(false);
+    }
+  };
+
   // Toggle part selection
   const handleTogglePart = (item: typeof inventoryItems[0]) => {
     const existing = selectedParts.find(p => p.id === item.id);
@@ -1122,14 +1218,24 @@ export default function CrmCardModal({
                     <p className="text-sm font-semibold text-airDark flex items-center gap-2">
                       <User className="w-4 h-4" /> Informations client
                     </p>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      icon={<Edit3 className="w-4 h-4" />}
-                      onClick={() => setEditMode(!editMode)}
-                    >
-                      {editMode ? 'Annuler' : 'Modifier'}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        icon={<FileText className="w-4 h-4" />}
+                        onClick={() => setShowQuickQuote(true)}
+                      >
+                        Nouveau Devis
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        icon={<Edit3 className="w-4 h-4" />}
+                        onClick={() => setEditMode(!editMode)}
+                      >
+                        {editMode ? 'Annuler' : 'Modifier'}
+                      </Button>
+                    </div>
                   </div>
 
                   {editMode ? (
@@ -2088,6 +2194,91 @@ export default function CrmCardModal({
           }}
         />
       )}
+
+      {/* Quick Quote Modal (new simplified flow) */}
+      <Modal
+        isOpen={showQuickQuote}
+        onClose={() => {
+          setShowQuickQuote(false);
+          setQuickQuoteAmount('');
+          setQuickQuoteDesc('');
+        }}
+        title="Nouveau Devis Rapide"
+        size="md"
+      >
+        <div className="space-y-4">
+          <div className="bg-airSurface/50 rounded-xl p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-airPrimary/10 flex items-center justify-center">
+                <User className="w-5 h-5 text-airPrimary" />
+              </div>
+              <div>
+                <p className="font-semibold text-airDark">{client?.name}</p>
+                <p className="text-sm text-airMuted">{clientAddress || client?.phone}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <Input
+              label="Montant TTC (€)"
+              type="number"
+              value={quickQuoteAmount}
+              onChange={(e) => setQuickQuoteAmount(e.target.value)}
+              placeholder="Ex: 450"
+              min="0"
+              step="0.01"
+            />
+
+            <div>
+              <label className="block text-sm font-semibold text-airDark mb-2">
+                Description (optionnel)
+              </label>
+              <textarea
+                value={quickQuoteDesc}
+                onChange={(e) => setQuickQuoteDesc(e.target.value)}
+                placeholder="Ex: Installation climatisation split..."
+                className="w-full rounded-xl border border-airBorder px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-airPrimary min-h-[80px] resize-none"
+              />
+            </div>
+          </div>
+
+          {quickQuoteAmount && parseFloat(quickQuoteAmount) > 0 && (
+            <div className="bg-gradient-to-r from-orange-50 to-blue-50 rounded-xl border-2 border-orange-400 p-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-airMuted">Total TTC</span>
+                <span className="text-2xl font-bold text-orange-500">
+                  {parseFloat(quickQuoteAmount).toFixed(2)} €
+                </span>
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-2">
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setShowQuickQuote(false);
+                setQuickQuoteAmount('');
+                setQuickQuoteDesc('');
+              }}
+              className="flex-1"
+            >
+              Annuler
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleQuickQuote}
+              loading={quickQuoteLoading}
+              disabled={!quickQuoteAmount || parseFloat(quickQuoteAmount) <= 0}
+              icon={<FileText className="w-4 h-4" />}
+              className="flex-1"
+            >
+              Créer & Prévisualiser
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Terminé Confirmation Modal */}
       <Modal
