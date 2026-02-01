@@ -31,11 +31,15 @@ type Quote = {
   quote_number: string;
   status: string;
   total: number;
-  subtotal: number;
+  subtotal?: number;
+  labor_total?: number;
+  parts_total?: number;
+  tax_rate?: number;
+  tax_amount?: number;
   created_at: string;
   sent_at?: string;
   accepted_at?: string;
-  valid_until?: string;
+  expires_at?: string;
   client_id: string;
   clients?: {
     id: string;
@@ -47,6 +51,7 @@ type Quote = {
   };
   quote_items?: Array<{
     id: string;
+    kind?: string;
     label?: string;
     description?: string;
     quantity: number;
@@ -79,32 +84,9 @@ export default function DevisPage() {
   const fetchQuotes = useCallback(async () => {
     setLoading(true);
     try {
-      const supabase = getSupabaseBrowserClient();
-      const { data, error } = await supabase
-        .from("quotes")
-        .select(`
-          *,
-          clients (
-            id,
-            first_name,
-            last_name,
-            email,
-            phone,
-            tracking_id
-          ),
-          quote_items (
-            id,
-            label,
-            description,
-            quantity,
-            unit_price,
-            line_total
-          )
-        `)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      setQuotes(data || []);
+      // Use API instead of direct Supabase to avoid RLS issues
+      const response = await apiFetch<{ quotes?: Quote[]; total?: number }>("/api/admin/quotes?limit=200");
+      setQuotes(response.quotes || []);
     } catch (err) {
       console.error("[Devis] fetch failed", err);
       toast.addToast("Erreur chargement des devis", "error");
@@ -579,10 +561,10 @@ export default function DevisPage() {
                     </span>
                   </div>
                 )}
-                {selectedQuote.valid_until && (
+                {selectedQuote.expires_at && (
                   <div className="flex items-center gap-3">
                     <div className="w-2 h-2 rounded-full bg-amber-400" />
-                    <span className="text-amber-600">Valide jusqu'au {formatDate(selectedQuote.valid_until)}</span>
+                    <span className="text-amber-600">Valide jusqu'au {formatDate(selectedQuote.expires_at)}</span>
                   </div>
                 )}
               </div>

@@ -165,7 +165,13 @@ export default function DashboardPage() {
     },
     ...(canAccessClients ? [{
       name: 'Devis', value: kpis.monthQuotesCount.toString(),
-      change: kpis.acceptedQuotesCount > 0 ? `${kpis.acceptedQuotesCount} accepté(s)` : (kpis.sentQuotesCount > 0 ? `${kpis.sentQuotesCount} en attente` : 'Aucun ce mois'),
+      change: kpis.acceptedQuotesCount > 0
+        ? `${kpis.acceptedQuotesCount} accepté(s)`
+        : kpis.sentQuotesCount > 0
+          ? `${kpis.sentQuotesCount} envoyé(s)`
+          : kpis.draftQuotesCount > 0
+            ? `${kpis.draftQuotesCount} brouillon(s)`
+            : 'Aucun ce mois',
       changeType: kpis.acceptedQuotesCount > 0 ? 'positive' : (kpis.sentQuotesCount > 0 ? 'warning' : 'neutral'),
       icon: FileText, color: 'bg-purple-50 text-purple-600', href: '/dashboard/devis',
     }] : []),

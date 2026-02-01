@@ -118,7 +118,7 @@ export default function AppointmentsPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'agenda' | 'calendar'>('agenda');
+  const [viewMode, setViewMode] = useState<'agenda' | 'calendar'>('calendar');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [typeFilter, setTypeFilter] = useState<string>('');
 
@@ -680,7 +680,7 @@ export default function AppointmentsPage() {
             <div className="hidden md:grid grid-cols-4 gap-3 mt-6">
               <Card className="p-3 text-center">
                 <p className="text-2xl font-bold text-airDark">{appointments.length}</p>
-                <p className="text-xs text-airMuted">Cette semaine</p>
+                <p className="text-xs text-airMuted">Semaine affichée</p>
               </Card>
               <Card className="p-3 text-center">
                 <p className="text-2xl font-bold text-amber-600">{pendingCount}</p>

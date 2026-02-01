@@ -14,6 +14,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const clientId = searchParams.get("client_id");
+    const startDate = searchParams.get("start_date");
+    const endDate = searchParams.get("end_date");
     const limit = parseInt(searchParams.get("limit") || "50");
 
     let query = supabase
@@ -21,7 +23,7 @@ export async function GET(request: NextRequest) {
       .select("*, clients(first_name, last_name, email, phone)", {
         count: "exact",
       })
-      .order("scheduled_at", { ascending: false })
+      .order("scheduled_at", { ascending: true })
       .limit(limit);
 
     if (status && status !== "all") {
@@ -30,6 +32,14 @@ export async function GET(request: NextRequest) {
 
     if (clientId) {
       query = query.eq("client_id", clientId);
+    }
+
+    // Filter by date range if provided
+    if (startDate) {
+      query = query.gte("scheduled_at", `${startDate}T00:00:00`);
+    }
+    if (endDate) {
+      query = query.lte("scheduled_at", `${endDate}T23:59:59`);
     }
 
     const { data: appointments, error, count } = await query;

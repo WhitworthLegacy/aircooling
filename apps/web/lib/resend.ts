@@ -55,6 +55,7 @@ export type QuoteEmailData = {
   clientName: string;
   clientEmail: string;
   quoteNumber: string;
+  quoteId: string;
   items: Array<{
     description: string;
     quantity: number;
@@ -307,10 +308,24 @@ export function generateQuoteEmailHtml(data: QuoteEmailData): string {
         </div>
       </div>
 
-      <!-- CTA Button -->
+      <!-- Action Buttons -->
       <div style="text-align: center; margin: 30px 0;">
-        <p style="color: #4a4a4a; margin: 0 0 15px 0;">Pour accepter ce devis, repondez simplement a cet email ou contactez-nous :</p>
-        ${generateCTAButton(`tel:${brand.phone}`, 'Nous appeler', brand)}
+        <p style="color: #4a4a4a; margin: 0 0 20px 0; font-size: 16px;">
+          <strong>Acceptez-vous ce devis ?</strong>
+        </p>
+        <div style="display: inline-block;">
+          <a href="${getBaseUrl()}/api/quotes/action?id=${data.quoteId}&action=accept&email=${encodeURIComponent(data.clientEmail)}"
+             style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 14px 32px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 16px; margin: 5px;">
+            ✓ Accepter le devis
+          </a>
+          <a href="${getBaseUrl()}/api/quotes/action?id=${data.quoteId}&action=refuse&email=${encodeURIComponent(data.clientEmail)}"
+             style="display: inline-block; background: #f3f4f6; color: #6b7280; padding: 14px 32px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 16px; margin: 5px; border: 2px solid #e5e7eb;">
+            ✗ Refuser
+          </a>
+        </div>
+        <p style="color: #6b7280; margin: 20px 0 0 0; font-size: 13px;">
+          Ou contactez-nous au <a href="tel:${brand.phone}" style="color: ${colors.primary};">${brand.phone}</a>
+        </p>
       </div>
 
       ${data.trackingUrl ? `

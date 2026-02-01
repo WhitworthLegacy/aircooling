@@ -94,6 +94,7 @@ export async function POST(request: NextRequest) {
       clientName,
       clientEmail: client.email,
       quoteNumber: quote.quote_number || quote.id.slice(0, 8).toUpperCase(),
+      quoteId: quote.id,
       items,
       totalAmount,
       validUntil,

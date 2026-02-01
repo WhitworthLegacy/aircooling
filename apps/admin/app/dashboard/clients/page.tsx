@@ -119,6 +119,21 @@ export default function ClientsPage() {
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [appointmentDetailOpen, setAppointmentDetailOpen] = useState(false);
 
+  // New client modal
+  const [newClientModalOpen, setNewClientModalOpen] = useState(false);
+  const [newClientForm, setNewClientForm] = useState({
+    first_name: '',
+    last_name: '',
+    phone: '',
+    email: '',
+    address: '',
+    city: '',
+    postal_code: '',
+    system_type: '',
+    notes: '',
+  });
+  const [creatingClient, setCreatingClient] = useState(false);
+
   const toast = useToast();
 
   const fetchClients = useCallback(async () => {
@@ -404,6 +419,67 @@ export default function ClientsPage() {
     return labels[status] || status;
   };
 
+  const handleCreateClient = async () => {
+    if (!newClientForm.first_name && !newClientForm.last_name) {
+      toast.addToast('Veuillez entrer un nom', 'error');
+      return;
+    }
+
+    setCreatingClient(true);
+    try {
+      await apiFetch('/api/clients', {
+        method: 'POST',
+        body: JSON.stringify({
+          first_name: newClientForm.first_name,
+          last_name: newClientForm.last_name,
+          phone: newClientForm.phone || null,
+          email: newClientForm.email || null,
+          address: newClientForm.address || null,
+          city: newClientForm.city || null,
+          postal_code: newClientForm.postal_code || null,
+          system_type: newClientForm.system_type || null,
+          notes: newClientForm.notes || null,
+          crm_stage: CRM_STAGES.NOUVEAU,
+        }),
+      });
+
+      toast.addToast('Client créé avec succès', 'success');
+      setNewClientModalOpen(false);
+      setNewClientForm({
+        first_name: '',
+        last_name: '',
+        phone: '',
+        email: '',
+        address: '',
+        city: '',
+        postal_code: '',
+        system_type: '',
+        notes: '',
+      });
+      fetchClients();
+    } catch (err) {
+      console.error('[clients] create failed', err);
+      toast.addToast('Erreur lors de la création', 'error');
+    } finally {
+      setCreatingClient(false);
+    }
+  };
+
+  const openNewClientModal = () => {
+    setNewClientForm({
+      first_name: '',
+      last_name: '',
+      phone: '',
+      email: '',
+      address: '',
+      city: '',
+      postal_code: '',
+      system_type: '',
+      notes: '',
+    });
+    setNewClientModalOpen(true);
+  };
+
   const getStatusColor = (status?: string) => {
     if (!status) return 'bg-gray-100 text-gray-700';
     return STATUS_COLORS[status] || 'bg-gray-100 text-gray-700';
@@ -461,13 +537,17 @@ export default function ClientsPage() {
               <Button
                 variant="ghost"
                 size="md"
-                icon={<Plus className="w-4 h-4" />}
                 href="/dashboard/crm"
               >
                 Voir CRM
               </Button>
-              <Button href="/dashboard/crm" variant="primary" size="md">
-                + Nouveau client
+              <Button
+                variant="primary"
+                size="md"
+                icon={<Plus className="w-4 h-4" />}
+                onClick={openNewClientModal}
+              >
+                Nouveau client
               </Button>
             </div>
           </div>
@@ -1150,6 +1230,100 @@ export default function ClientsPage() {
           />
         </div>
       )}
+
+      {/* New Client Modal */}
+      <Modal
+        isOpen={newClientModalOpen}
+        onClose={() => setNewClientModalOpen(false)}
+        title="Nouveau client"
+        size="lg"
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Prénom"
+              value={newClientForm.first_name}
+              onChange={(e) => setNewClientForm({ ...newClientForm, first_name: e.target.value })}
+              placeholder="Prénom"
+            />
+            <Input
+              label="Nom"
+              value={newClientForm.last_name}
+              onChange={(e) => setNewClientForm({ ...newClientForm, last_name: e.target.value })}
+              placeholder="Nom de famille"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Téléphone"
+              value={newClientForm.phone}
+              onChange={(e) => setNewClientForm({ ...newClientForm, phone: e.target.value })}
+              placeholder="+32..."
+            />
+            <Input
+              label="Email"
+              type="email"
+              value={newClientForm.email}
+              onChange={(e) => setNewClientForm({ ...newClientForm, email: e.target.value })}
+              placeholder="email@exemple.be"
+            />
+          </div>
+
+          <Input
+            label="Adresse"
+            value={newClientForm.address}
+            onChange={(e) => setNewClientForm({ ...newClientForm, address: e.target.value })}
+            placeholder="Rue et numéro"
+          />
+
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Code postal"
+              value={newClientForm.postal_code}
+              onChange={(e) => setNewClientForm({ ...newClientForm, postal_code: e.target.value })}
+              placeholder="1000"
+            />
+            <Input
+              label="Ville"
+              value={newClientForm.city}
+              onChange={(e) => setNewClientForm({ ...newClientForm, city: e.target.value })}
+              placeholder="Bruxelles"
+            />
+          </div>
+
+          <Select
+            label="Type de système"
+            value={newClientForm.system_type}
+            onChange={(e) => setNewClientForm({ ...newClientForm, system_type: e.target.value })}
+            options={SYSTEM_TYPES}
+          />
+
+          <div>
+            <label className="block text-xs font-semibold text-airPrimary mb-1">Notes</label>
+            <textarea
+              value={newClientForm.notes}
+              onChange={(e) => setNewClientForm({ ...newClientForm, notes: e.target.value })}
+              className="w-full rounded-xl border border-airBorder px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-airPrimary min-h-[80px] resize-none"
+              placeholder="Notes sur le client..."
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-airBorder">
+            <Button variant="ghost" onClick={() => setNewClientModalOpen(false)}>
+              Annuler
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleCreateClient}
+              loading={creatingClient}
+              icon={<Plus className="w-4 h-4" />}
+            >
+              Créer le client
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </>
   );
 }

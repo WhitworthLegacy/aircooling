@@ -85,18 +85,18 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseAdmin();
 
-    // Generate quote number (YYYYMMDD-XXX format)
-    const today = new Date();
-    const datePrefix = today.toISOString().slice(0, 10).replace(/-/g, "");
+    // Generate quote number (YEAR + 3-digit sequence: 2026001, 2026002, etc.)
+    const currentYear = new Date().getFullYear();
+    const yearStart = `${currentYear}-01-01`;
 
-    // Count today's quotes to generate sequence number
+    // Count this year's quotes to generate sequence number
     const { count } = await supabase
       .from("quotes")
       .select("*", { count: "exact", head: true })
-      .gte("created_at", today.toISOString().slice(0, 10));
+      .gte("created_at", yearStart);
 
     const sequence = String((count || 0) + 1).padStart(3, "0");
-    const quote_number = `${datePrefix}-${sequence}`;
+    const quote_number = `${currentYear}${sequence}`;
 
     // Build quote items from labor + parts + legacy items
     const allItems: QuoteItem[] = [];

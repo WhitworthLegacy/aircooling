@@ -568,7 +568,30 @@ export default function CrmCardModal({
 
     setQuoteSaving(true);
     try {
-      const response = await apiFetch<{ success: boolean; quote?: { quote_number: string } }>('/api/admin/quotes', {
+      type QuoteResponse = {
+        success: boolean;
+        quote?: {
+          id: string;
+          quote_number: string;
+          labor_total: number;
+          parts_total: number;
+          tax_rate: number;
+          tax_amount: number;
+          total: number;
+          notes?: string;
+          expires_at: string;
+          quote_items: Array<{
+            kind: string;
+            label: string;
+            description?: string;
+            quantity: number;
+            unit_price: number;
+            line_total: number;
+          }>;
+        };
+      };
+
+      const response = await apiFetch<QuoteResponse>('/api/admin/quotes', {
         method: 'POST',
         body: JSON.stringify({
           client_id: client.id,
@@ -592,12 +615,25 @@ export default function CrmCardModal({
       if (response.success && response.quote) {
         toast.addToast(`Devis ${response.quote.quote_number} créé`, 'success');
 
-        // Store created quote for preview
-        setCreatedQuote(response.quote as typeof createdQuote);
+        // Store created quote for preview - ensure all fields are present
+        setCreatedQuote({
+          id: response.quote.id,
+          quote_number: response.quote.quote_number,
+          labor_total: response.quote.labor_total || 0,
+          parts_total: response.quote.parts_total || 0,
+          tax_rate: response.quote.tax_rate || 21,
+          tax_amount: response.quote.tax_amount || 0,
+          total: response.quote.total || 0,
+          notes: response.quote.notes,
+          expires_at: response.quote.expires_at || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          quote_items: response.quote.quote_items || [],
+        });
 
         // Close form, open preview
         setShowQuoteForm(false);
         setShowQuotePreview(true);
+      } else {
+        toast.addToast("Erreur: devis non créé", 'error');
       }
     } catch (error) {
       console.error('[CRM] failed to create quote', error);
