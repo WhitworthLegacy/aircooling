@@ -813,6 +813,7 @@ export default function CrmCardModal({
 
       const response = await apiFetch<QuoteResponse>('/api/admin/quotes', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           client_id: client.id,
           labor_type: 'installation',
@@ -847,14 +848,16 @@ export default function CrmCardModal({
           quote_items: response.quote.quote_items || [],
         };
 
-        // Close quick quote modal, set data, open preview
+        // Close quick quote modal and reset form
         setShowQuickQuote(false);
-        setCreatedQuote(quoteData);
-        setShowQuotePreview(true);
-
-        // Reset quick quote form
         setQuickQuoteAmount('');
         setQuickQuoteDesc('');
+
+        // Store quote data and open preview (after modal is closed)
+        setTimeout(() => {
+          setCreatedQuote(quoteData);
+          setShowQuotePreview(true);
+        }, 150);
       } else {
         toast.addToast("Erreur: devis non créé", 'error');
       }
@@ -2219,7 +2222,7 @@ export default function CrmCardModal({
             </div>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-3" onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }}>
             <Input
               label="Montant TTC (€)"
               type="number"
@@ -2228,6 +2231,7 @@ export default function CrmCardModal({
               placeholder="Ex: 450"
               min="0"
               step="0.01"
+              onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }}
             />
 
             <div>
@@ -2239,6 +2243,7 @@ export default function CrmCardModal({
                 onChange={(e) => setQuickQuoteDesc(e.target.value)}
                 placeholder="Ex: Installation climatisation split..."
                 className="w-full rounded-xl border border-airBorder px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-airPrimary min-h-[80px] resize-none"
+                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) e.stopPropagation(); }}
               />
             </div>
           </div>
