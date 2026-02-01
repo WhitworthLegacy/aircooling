@@ -236,6 +236,18 @@ export default function CrmCardModal({
   // Test preview (to isolate issue)
   const [showTestPreview, setShowTestPreview] = useState(false);
 
+  // Simple preview data state (replaces complex createdQuote + showQuotePreview)
+  const [previewData, setPreviewData] = useState<{
+    quoteNumber: string;
+    items: Array<{ kind: string; label: string; description?: string; quantity: number; unit_price: number; line_total: number }>;
+    laborTotal: number;
+    partsTotal: number;
+    taxRate: number;
+    taxAmount: number;
+    total: number;
+    notes?: string;
+  } | null>(null);
+
   // Timeline email
   const [timelineSending, setTimelineSending] = useState(false);
 
@@ -837,30 +849,24 @@ export default function CrmCardModal({
       if (response.success && response.quote) {
         toast.addToast(`Devis ${response.quote.quote_number} créé`, 'success');
 
-        // Store quote data
-        const quoteData = {
-          id: response.quote.id,
-          quote_number: response.quote.quote_number,
-          labor_total: response.quote.labor_total || 0,
-          parts_total: response.quote.parts_total || 0,
-          tax_rate: response.quote.tax_rate || 21,
-          tax_amount: response.quote.tax_amount || 0,
-          total: response.quote.total || 0,
-          notes: response.quote.notes,
-          expires_at: response.quote.expires_at || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-          quote_items: response.quote.quote_items || [],
-        };
-
-        // Close quick quote modal and reset form
+        // Close quick quote modal and reset form FIRST
         setShowQuickQuote(false);
         setQuickQuoteAmount('');
         setQuickQuoteDesc('');
 
-        // Store quote data and open preview (after modal is closed)
+        // Set preview data after modal is closed (simpler approach like test preview)
         setTimeout(() => {
-          setCreatedQuote(quoteData);
-          setShowQuotePreview(true);
-        }, 150);
+          setPreviewData({
+            quoteNumber: response.quote!.quote_number,
+            items: response.quote!.quote_items || [],
+            laborTotal: response.quote!.labor_total || 0,
+            partsTotal: response.quote!.parts_total || 0,
+            taxRate: response.quote!.tax_rate || 21,
+            taxAmount: response.quote!.tax_amount || 0,
+            total: response.quote!.total || 0,
+            notes: response.quote!.notes,
+          });
+        }, 250);
       } else {
         toast.addToast("Erreur: devis non créé", 'error');
       }
@@ -2232,6 +2238,34 @@ export default function CrmCardModal({
             taxAmount: 69.3,
             total: 399.3,
             notes: "Test depuis CRM",
+            serviceType: "installation",
+          }}
+        />
+      )}
+
+      {/* Real Quote Preview (using simpler previewData state) */}
+      {previewData && (
+        <QuotePreviewModal
+          open={!!previewData}
+          onClose={() => setPreviewData(null)}
+          clientEmail={client?.email}
+          onSendEmail={async () => {
+            toast.addToast("Fonction email à implémenter", "info");
+          }}
+          isSending={false}
+          data={{
+            quoteNumber: previewData.quoteNumber,
+            clientName: client?.name || '',
+            clientEmail: client?.email || undefined,
+            clientPhone: client?.phone || undefined,
+            clientAddress: clientAddress || undefined,
+            items: previewData.items,
+            laborTotal: previewData.laborTotal,
+            partsTotal: previewData.partsTotal,
+            taxRate: previewData.taxRate,
+            taxAmount: previewData.taxAmount,
+            total: previewData.total,
+            notes: previewData.notes,
             serviceType: "installation",
           }}
         />
