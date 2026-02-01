@@ -48,8 +48,14 @@ import { getSupabaseBrowserClient } from '@/lib/supabase';
 import { CrmClient, CrmColumn } from './types';
 import { STATUS_LABELS, CRM_STAGES } from '@/lib/constants';
 import { ChecklistGroup, HVAC_DIAGNOSTIC_CHECKLIST, HVAC_ENTRETIEN_CHECKLIST } from '@/lib/checklists';
-import QuotePreviewModal from '@/components/quotes/QuotePreviewModal';
+import dynamic from 'next/dynamic';
 import type { QuotePDFData } from '@/components/quotes/QuotePDF';
+
+// Dynamic import for PDF components (client-side only - @react-pdf/renderer doesn't work on server)
+const QuotePreviewModal = dynamic(
+  () => import('@/components/quotes/QuotePreviewModal'),
+  { ssr: false }
+);
 
 type ClientAppointment = {
   id: string;
