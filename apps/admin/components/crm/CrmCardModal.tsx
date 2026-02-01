@@ -233,6 +233,9 @@ export default function CrmCardModal({
   const [quickQuoteDesc, setQuickQuoteDesc] = useState('');
   const [quickQuoteLoading, setQuickQuoteLoading] = useState(false);
 
+  // Test preview (to isolate issue)
+  const [showTestPreview, setShowTestPreview] = useState(false);
+
   // Timeline email
   const [timelineSending, setTimelineSending] = useState(false);
 
@@ -1231,6 +1234,13 @@ export default function CrmCardModal({
                         Nouveau Devis
                       </Button>
                       <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setShowTestPreview(true)}
+                      >
+                        Test PDF
+                      </Button>
+                      <Button
                         variant="ghost"
                         size="sm"
                         icon={<Edit3 className="w-4 h-4" />}
@@ -2194,6 +2204,35 @@ export default function CrmCardModal({
             total: createdQuote.total,
             notes: createdQuote.notes,
             serviceType: laborType,
+          }}
+        />
+      )}
+
+      {/* Test PDF Preview (to isolate issue) */}
+      {showTestPreview && (
+        <QuotePreviewModal
+          open={showTestPreview}
+          onClose={() => setShowTestPreview(false)}
+          clientEmail={client?.email}
+          onSendEmail={async () => { toast.addToast("Test - non envoyé", "info"); }}
+          isSending={false}
+          data={{
+            quoteNumber: "TEST-CRM",
+            clientName: client?.name || 'Test Client',
+            clientEmail: client?.email || undefined,
+            clientPhone: client?.phone || undefined,
+            clientAddress: clientAddress || undefined,
+            items: [
+              { kind: "labor", label: "Test main d'oeuvre", quantity: 2, unit_price: 65, line_total: 130 },
+              { kind: "part", label: "Test pièce", quantity: 1, unit_price: 200, line_total: 200 },
+            ],
+            laborTotal: 130,
+            partsTotal: 200,
+            taxRate: 21,
+            taxAmount: 69.3,
+            total: 399.3,
+            notes: "Test depuis CRM",
+            serviceType: "installation",
           }}
         />
       )}
