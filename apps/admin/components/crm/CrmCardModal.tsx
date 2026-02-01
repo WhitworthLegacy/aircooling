@@ -236,9 +236,6 @@ export default function CrmCardModal({
   const [quickQuoteDesc, setQuickQuoteDesc] = useState('');
   const [quickQuoteLoading, setQuickQuoteLoading] = useState(false);
 
-  // Test preview (to isolate issue)
-  const [showTestPreview, setShowTestPreview] = useState(false);
-
   // Simple preview data state (replaces complex createdQuote + showQuotePreview)
   const [previewData, setPreviewData] = useState<{
     quoteNumber: string;
@@ -1247,31 +1244,14 @@ export default function CrmCardModal({
                     <p className="text-sm font-semibold text-airDark flex items-center gap-2">
                       <User className="w-4 h-4" /> Informations client
                     </p>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        icon={<FileText className="w-4 h-4" />}
-                        onClick={() => setShowQuickQuote(true)}
-                      >
-                        Nouveau Devis
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => setShowTestPreview(true)}
-                      >
-                        Test PDF
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        icon={<Edit3 className="w-4 h-4" />}
-                        onClick={() => setEditMode(!editMode)}
-                      >
-                        {editMode ? 'Annuler' : 'Modifier'}
-                      </Button>
-                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      icon={<Edit3 className="w-4 h-4" />}
+                      onClick={() => setEditMode(!editMode)}
+                    >
+                      {editMode ? 'Annuler' : 'Modifier'}
+                    </Button>
                   </div>
 
                   {editMode ? (
@@ -2231,36 +2211,7 @@ export default function CrmCardModal({
         />
       )}
 
-      {/* Test PDF Preview (to isolate issue) */}
-      {showTestPreview && (
-        <QuotePreviewModal
-          open={showTestPreview}
-          onClose={() => setShowTestPreview(false)}
-          clientEmail={client?.email}
-          onSendEmail={async () => { addToast("Test - non envoyé", "info"); }}
-          isSending={false}
-          data={{
-            quoteNumber: "TEST-CRM",
-            clientName: client?.name || 'Test Client',
-            clientEmail: client?.email || undefined,
-            clientPhone: client?.phone || undefined,
-            clientAddress: clientAddress || undefined,
-            items: [
-              { kind: "labor", label: "Test main d'oeuvre", quantity: 2, unit_price: 65, line_total: 130 },
-              { kind: "part", label: "Test pièce", quantity: 1, unit_price: 200, line_total: 200 },
-            ],
-            laborTotal: 130,
-            partsTotal: 200,
-            taxRate: 21,
-            taxAmount: 69.3,
-            total: 399.3,
-            notes: "Test depuis CRM",
-            serviceType: "installation",
-          }}
-        />
-      )}
-
-      {/* Real Quote Preview (using simpler previewData state) */}
+      {/* Quote Preview (using simpler previewData state) */}
       {previewData && (
         <QuotePreviewModal
           open={!!previewData}

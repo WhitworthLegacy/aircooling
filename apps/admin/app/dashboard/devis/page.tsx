@@ -20,7 +20,6 @@ import {
   MoreVertical,
   RefreshCw,
   MessageSquare,
-  FlaskConical,
 } from "lucide-react";
 import { PageContainer } from "@/components/layout";
 import { Badge, Button, Card, Input, Modal, Select, useToast } from "@/components/ui";
@@ -180,27 +179,6 @@ export default function DevisPage() {
   const [resending, setResending] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
 
-  // Test PDF Preview state
-  const [showTestPreview, setShowTestPreview] = useState(false);
-  const testQuoteData: QuotePreviewData = {
-    quoteNumber: "TEST-0001",
-    clientName: "Client Test",
-    clientEmail: "test@example.com",
-    clientPhone: "+32 470 00 00 00",
-    clientAddress: "Rue de Test 123, 1000 Bruxelles",
-    items: [
-      { kind: "labor", label: "Main d'oeuvre installation", description: "4h x 65€/h", quantity: 4, unit_price: 65, line_total: 260 },
-      { kind: "part", label: "Climatiseur split", description: "Samsung WindFree", quantity: 1, unit_price: 850, line_total: 850 },
-    ],
-    laborTotal: 260,
-    partsTotal: 850,
-    taxRate: 21,
-    taxAmount: 233.1,
-    total: 1343.1,
-    notes: "Ceci est un test du PDF preview",
-    serviceType: "installation",
-  };
-
   const handleResendEmail = async () => {
     if (!selectedQuote || !selectedQuote.clients?.email) {
       toast.addToast("Pas d'email client", "error");
@@ -313,18 +291,9 @@ export default function DevisPage() {
                 {stats.total} devis • {stats.accepted} acceptés ({stats.totalAmount.toFixed(0)}€)
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="primary"
-                icon={<FlaskConical className="w-4 h-4" />}
-                onClick={() => setShowTestPreview(true)}
-              >
-                Test PDF Preview
-              </Button>
-              <Button variant="ghost" icon={<RefreshCw className="w-4 h-4" />} onClick={fetchQuotes}>
-                Actualiser
-              </Button>
-            </div>
+            <Button variant="ghost" icon={<RefreshCw className="w-4 h-4" />} onClick={fetchQuotes}>
+              Actualiser
+            </Button>
           </div>
 
           {/* Stats Cards */}
@@ -662,19 +631,6 @@ export default function DevisPage() {
         </div>
       </Modal>
 
-      {/* Test PDF Preview Modal */}
-      {showTestPreview && (
-        <QuotePreviewModal
-          open={showTestPreview}
-          onClose={() => setShowTestPreview(false)}
-          clientEmail={testQuoteData.clientEmail}
-          onSendEmail={async () => {
-            toast.addToast("Email test (non envoyé)", "info");
-          }}
-          isSending={false}
-          data={testQuoteData}
-        />
-      )}
     </>
   );
 }
