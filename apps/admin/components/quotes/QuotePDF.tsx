@@ -13,19 +13,19 @@ import {
   Rect,
 } from "@react-pdf/renderer";
 
-// AirCooling Brand Colors
+// AirCooling Brand Colors (from globals.css)
 const COLORS = {
   primary: "#1B3B8A",
   primaryLight: "#2E5BB8",
   primaryDark: "#0F2654",
-  accent: "#FF6B35",
-  accentLight: "#FF8A5B",
+  accent: "#CC0A0A",      // Red - brand accent
+  accentLight: "#E53E3E",
   dark: "#293133",
-  muted: "#64748b",
+  muted: "#6B7280",
   lightGray: "#f1f5f9",
   white: "#FFFFFF",
   lightBlue: "#e8f4fc",
-  lightOrange: "#fff7f0",
+  lightRed: "#fef2f2",    // Light red for total box background
 };
 
 const styles = StyleSheet.create({
@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   totalCardBody: {
-    backgroundColor: COLORS.lightOrange,
+    backgroundColor: COLORS.lightRed,
     padding: 16,
   },
   totalRow: {
