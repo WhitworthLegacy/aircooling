@@ -75,6 +75,7 @@ interface CrmCardModalProps {
   onClose: () => void;
   onStageChange?: (clientId: string, nextStage: string) => Promise<void> | void;
   onNotesChange?: (clientId: string, notes: string) => Promise<void> | void;
+  onClientPatch?: (clientId: string, patch: Partial<CrmClient>) => void;
   onClientUpdate?: () => Promise<void> | void;
 }
 
@@ -120,6 +121,7 @@ export default function CrmCardModal({
   onClose,
   onStageChange,
   onNotesChange,
+  onClientPatch,
   onClientUpdate,
 }: CrmCardModalProps) {
   const toast = useToast();
@@ -503,8 +505,17 @@ export default function CrmCardModal({
       });
       toast.addToast('Informations mises à jour', 'success');
       setEditMode(false);
-      if (onClientUpdate) {
-        await onClientUpdate();
+      // Use optimistic patch instead of full refetch
+      if (onClientPatch && client) {
+        onClientPatch(client.id, {
+          name: editForm.name,
+          phone: editForm.phone,
+          email: editForm.email,
+          address: editForm.address,
+          city: editForm.city,
+          postalCode: editForm.postalCode,
+          systemType: editForm.systemType,
+        });
       }
     } catch (error) {
       console.error('[CRM] client update failed', error);
@@ -920,8 +931,15 @@ export default function CrmCardModal({
       setWorkflowState(newWorkflowState);
       toast.addToast(paid ? 'Paiement enregistré' : 'Paiement annulé', 'success');
 
-      if (onClientUpdate) {
-        await onClientUpdate();
+      // Use optimistic patch for stage change if moving to terminé
+      if (onClientPatch && client) {
+        const patch: Partial<CrmClient> = {};
+        if (paid && client.stage !== 'terminé') {
+          patch.stage = 'terminé';
+        }
+        if (Object.keys(patch).length > 0) {
+          onClientPatch(client.id, patch);
+        }
       }
     } catch (error) {
       console.error('[CRM] failed to save payment', error);
@@ -1030,9 +1048,7 @@ export default function CrmCardModal({
         }),
       });
       toast.addToast('Checklist sauvegardée', 'success');
-      if (onClientUpdate) {
-        await onClientUpdate();
-      }
+      // No need to refetch - local state is already updated
     } catch (error) {
       console.error('[CRM] checklist save failed', error);
       toast.addToast("Erreur sauvegarde checklist", 'error');

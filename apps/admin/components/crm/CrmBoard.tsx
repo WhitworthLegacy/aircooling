@@ -137,27 +137,37 @@ export default function CrmBoard() {
     setModalOpen(true);
   };
 
+  // Optimistic update helper - updates client in list without refetch
+  const updateClientInList = useCallback((clientId: string, patch: Partial<AdminClient>) => {
+    setClients((prev) =>
+      prev.map((c) => (c.id === clientId ? { ...c, ...patch } : c))
+    );
+    // Also update selectedClient if it's the same client
+    if (selectedClient?.id === clientId) {
+      setSelectedClient((prev) => (prev ? { ...prev, ...patch } : prev));
+    }
+  }, [selectedClient?.id]);
+
   const handleNotesChange = async (clientId: string, notes: string) => {
+    // Optimistic update FIRST
+    updateClientInList(clientId, { notes });
     try {
       await apiFetch(`/api/clients/${clientId}`, {
         method: "PATCH",
         body: JSON.stringify({ notes }),
       });
-      setClients((prev) =>
-        prev.map((c) => (c.id === clientId ? { ...c, notes } : c))
-      );
       toast.addToast("Note sauvegardée", "success");
     } catch {
       toast.addToast("Erreur sauvegarde note", "error");
+      // Revert on error by refetching
+      await fetchClients();
     }
   };
 
   const handleStageChange = async (clientId: string, newStage: string) => {
     const previous = clients.find((client) => client.id === clientId);
-    // Optimistic update
-    setClients((prev) =>
-      prev.map((c) => (c.id === clientId ? { ...c, stage: newStage } : c))
-    );
+    // Optimistic update using the helper
+    updateClientInList(clientId, { stage: newStage });
     try {
       await apiFetch(`/api/clients/${clientId}`, {
         method: "PATCH",
@@ -167,13 +177,16 @@ export default function CrmBoard() {
     } catch {
       // Rollback on error
       if (previous) {
-        setClients((prev) =>
-          prev.map((c) => (c.id === clientId ? { ...c, stage: previous.stage } : c))
-        );
+        updateClientInList(clientId, { stage: previous.stage });
       }
       toast.addToast("Erreur changement stage", "error");
     }
   };
+
+  // Generic client patch handler - updates specific fields without full refetch
+  const handleClientPatch = useCallback((clientId: string, patch: Partial<AdminClient>) => {
+    updateClientInList(clientId, patch);
+  }, [updateClientInList]);
 
   // Drag and drop handlers
   const handleDragStart = (event: DragEvent<HTMLDivElement>, clientId: string) => {
@@ -400,6 +413,7 @@ export default function CrmBoard() {
         onClose={() => setModalOpen(false)}
         onNotesChange={handleNotesChange}
         onStageChange={handleStageChange}
+        onClientPatch={handleClientPatch}
         onClientUpdate={() => void fetchClients()}
       />
 
