@@ -58,7 +58,9 @@ export default function CrmBoard() {
   });
   const [quickLoading, setQuickLoading] = useState(false);
 
-  const toast = useToast();
+  // Destructure only addToast to avoid dependency issues
+  // (the toast context object changes when toasts are added/removed)
+  const { addToast } = useToast();
 
   const fetchClients = useCallback(async () => {
     setLoading(true);
@@ -76,11 +78,11 @@ export default function CrmBoard() {
       setClients(rows.map((row) => normalizeClientRow(row)));
     } catch (err) {
       console.error("[crm] clients fetch failed", err);
-      toast.addToast("Erreur chargement clients", "error");
+      addToast("Erreur chargement clients", "error");
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [addToast]);
 
   useEffect(() => {
     void fetchClients();
@@ -156,9 +158,9 @@ export default function CrmBoard() {
         method: "PATCH",
         body: JSON.stringify({ notes }),
       });
-      toast.addToast("Note sauvegardée", "success");
+      addToast("Note sauvegardée", "success");
     } catch {
-      toast.addToast("Erreur sauvegarde note", "error");
+      addToast("Erreur sauvegarde note", "error");
       // Revert on error by refetching
       await fetchClients();
     }
@@ -173,13 +175,13 @@ export default function CrmBoard() {
         method: "PATCH",
         body: JSON.stringify({ crm_stage: newStage }),
       });
-      toast.addToast("Stage mis à jour", "success");
+      addToast("Stage mis à jour", "success");
     } catch {
       // Rollback on error
       if (previous) {
         updateClientInList(clientId, { stage: previous.stage });
       }
-      toast.addToast("Erreur changement stage", "error");
+      addToast("Erreur changement stage", "error");
     }
   };
 
@@ -218,7 +220,7 @@ export default function CrmBoard() {
   // Quick create client
   const handleQuickCreate = async () => {
     if (!quickForm.name || !quickForm.phone) {
-      toast.addToast("Nom et téléphone requis", "error");
+      addToast("Nom et téléphone requis", "error");
       return;
     }
     setQuickLoading(true);
@@ -243,7 +245,7 @@ export default function CrmBoard() {
           crm_stage: CRM_STAGES.NOUVEAU,
         }),
       });
-      toast.addToast('Client créé avec succès', 'success');
+      addToast('Client créé avec succès', 'success');
       setQuickOpen(false);
       setQuickForm({
         name: '',
@@ -258,7 +260,7 @@ export default function CrmBoard() {
       await fetchClients();
     } catch (err) {
       console.error('[CRM] quick create failed', err);
-      toast.addToast('Erreur lors de la création', 'error');
+      addToast('Erreur lors de la création', 'error');
     } finally {
       setQuickLoading(false);
     }

@@ -124,7 +124,8 @@ export default function CrmCardModal({
   onClientPatch,
   onClientUpdate,
 }: CrmCardModalProps) {
-  const toast = useToast();
+  // Destructure only addToast to avoid dependency issues
+  const { addToast } = useToast();
   const [appointments, setAppointments] = useState<ClientAppointment[]>([]);
   const [appointmentsLoading, setAppointmentsLoading] = useState(false);
   const [noteDraft, setNoteDraft] = useState('');
@@ -466,7 +467,7 @@ export default function CrmCardModal({
 
       // Update stage
       await onStageChange(client.id, stage);
-      toast.addToast(stage === 'Terminé' ? 'Intervention terminée' : 'Client marqué comme perdu', 'success');
+      addToast(stage === 'Terminé' ? 'Intervention terminée' : 'Client marqué comme perdu', 'success');
 
       // Reset and close dialogs
       setCloseComment('');
@@ -475,7 +476,7 @@ export default function CrmCardModal({
       onClose();
     } catch (error) {
       console.error('[CRM] failed to close client', error);
-      toast.addToast("Erreur lors de la mise à jour", 'error');
+      addToast("Erreur lors de la mise à jour", 'error');
     } finally {
       setClosingSaving(false);
     }
@@ -503,7 +504,7 @@ export default function CrmCardModal({
           system_type: editForm.systemType,
         }),
       });
-      toast.addToast('Informations mises à jour', 'success');
+      addToast('Informations mises à jour', 'success');
       setEditMode(false);
       // Use optimistic patch instead of full refetch
       if (onClientPatch && client) {
@@ -519,7 +520,7 @@ export default function CrmCardModal({
       }
     } catch (error) {
       console.error('[CRM] client update failed', error);
-      toast.addToast("Erreur lors de la sauvegarde", 'error');
+      addToast("Erreur lors de la sauvegarde", 'error');
     } finally {
       setEditSaving(false);
     }
@@ -542,7 +543,7 @@ export default function CrmCardModal({
           address: clientAddress,
         }),
       });
-      toast.addToast('RDV créé avec succès', 'success');
+      addToast('RDV créé avec succès', 'success');
       setShowAppointmentForm(false);
       setAppointmentForm({
         service_type: 'installation',
@@ -560,7 +561,7 @@ export default function CrmCardModal({
       }
     } catch (error) {
       console.error('[CRM] failed to create appointment', error);
-      toast.addToast("Erreur création RDV", 'error');
+      addToast("Erreur création RDV", 'error');
     } finally {
       setAppointmentSaving(false);
     }
@@ -581,12 +582,12 @@ export default function CrmCardModal({
           status,
         }),
       });
-      toast.addToast('Statut mis à jour', 'success');
+      addToast('Statut mis à jour', 'success');
       setAppointmentDetailOpen(false);
       fetchAppointments();
     } catch (error) {
       console.error('[CRM] failed to update appointment', error);
-      toast.addToast("Erreur mise à jour", 'error');
+      addToast("Erreur mise à jour", 'error');
     }
   };
 
@@ -605,7 +606,7 @@ export default function CrmCardModal({
     const hasManualAmount = quoteAmount && parseFloat(quoteAmount) > 0;
 
     if (!hasLabor && !hasParts && !hasManualAmount) {
-      toast.addToast("Ajoutez des heures de travail, des pièces ou un montant", 'warning');
+      addToast("Ajoutez des heures de travail, des pièces ou un montant", 'warning');
       return;
     }
 
@@ -654,7 +655,7 @@ export default function CrmCardModal({
       });
 
       if (response.success && response.quote) {
-        toast.addToast(`Devis ${response.quote.quote_number} créé`, 'success');
+        addToast(`Devis ${response.quote.quote_number} créé`, 'success');
 
         // Store created quote and open preview
         const quoteData = {
@@ -678,15 +679,15 @@ export default function CrmCardModal({
           setShowQuotePreview(true);
         }, 100);
       } else {
-        toast.addToast("Erreur: devis non créé", 'error');
+        addToast("Erreur: devis non créé", 'error');
       }
     } catch (error) {
       console.error('[CRM] failed to create quote', error);
-      toast.addToast("Erreur création devis", 'error');
+      addToast("Erreur création devis", 'error');
     } finally {
       setQuoteSaving(false);
     }
-  }, [client, laborHours, laborType, laborRate, selectedParts, quoteAmount, quoteDescription, toast]);
+  }, [client, laborHours, laborType, laborRate, selectedParts, quoteAmount, quoteDescription, addToast]);
 
   // Add part to quote
   const handleAddPart = (item: typeof inventoryItems[0]) => {
@@ -756,7 +757,7 @@ export default function CrmCardModal({
   // Send quote to client via email
   const handleSendQuote = async () => {
     if (!createdQuote?.id || !client?.email) {
-      toast.addToast("Email client requis pour envoyer le devis", 'warning');
+      addToast("Email client requis pour envoyer le devis", 'warning');
       return;
     }
 
@@ -770,7 +771,7 @@ export default function CrmCardModal({
       });
 
       if (response.ok) {
-        toast.addToast(`Devis envoyé à ${response.sent_to || client.email}`, 'success');
+        addToast(`Devis envoyé à ${response.sent_to || client.email}`, 'success');
 
         // Update stage to "Devis envoyé"
         if (onStageChange && client.stage !== CRM_STAGES.DEVIS_ENVOYE) {
@@ -782,7 +783,7 @@ export default function CrmCardModal({
       }
     } catch (error) {
       console.error('[CRM] failed to send quote', error);
-      toast.addToast("Erreur lors de l'envoi du devis", 'error');
+      addToast("Erreur lors de l'envoi du devis", 'error');
     } finally {
       setQuoteSending(false);
     }
@@ -808,7 +809,7 @@ export default function CrmCardModal({
 
     const amount = parseFloat(quickQuoteAmount);
     if (!amount || amount <= 0) {
-      toast.addToast("Montant requis", 'warning');
+      addToast("Montant requis", 'warning');
       return;
     }
 
@@ -858,7 +859,7 @@ export default function CrmCardModal({
       });
 
       if (response.success && response.quote) {
-        toast.addToast(`Devis ${response.quote.quote_number} créé`, 'success');
+        addToast(`Devis ${response.quote.quote_number} créé`, 'success');
 
         // Close quick quote modal and reset form FIRST
         setShowQuickQuote(false);
@@ -879,11 +880,11 @@ export default function CrmCardModal({
           });
         }, 250);
       } else {
-        toast.addToast("Erreur: devis non créé", 'error');
+        addToast("Erreur: devis non créé", 'error');
       }
     } catch (error) {
       console.error('[CRM] quick quote failed', error);
-      toast.addToast("Erreur création devis", 'error');
+      addToast("Erreur création devis", 'error');
     } finally {
       setQuickQuoteLoading(false);
     }
@@ -929,7 +930,7 @@ export default function CrmCardModal({
       setIsPaid(paid);
       if (method) setPaymentMethod(method);
       setWorkflowState(newWorkflowState);
-      toast.addToast(paid ? 'Paiement enregistré' : 'Paiement annulé', 'success');
+      addToast(paid ? 'Paiement enregistré' : 'Paiement annulé', 'success');
 
       // Use optimistic patch for stage change if moving to terminé
       if (onClientPatch && client) {
@@ -943,7 +944,7 @@ export default function CrmCardModal({
       }
     } catch (error) {
       console.error('[CRM] failed to save payment', error);
-      toast.addToast("Erreur lors de l'enregistrement", 'error');
+      addToast("Erreur lors de l'enregistrement", 'error');
     } finally {
       setPaymentSaving(false);
     }
@@ -967,11 +968,11 @@ export default function CrmCardModal({
 
       if (uploadError) throw uploadError;
 
-      toast.addToast('Photo ajoutée', 'success');
+      addToast('Photo ajoutée', 'success');
       fetchPhotos();
     } catch (error) {
       console.error('[CRM] failed to upload photo', error);
-      toast.addToast("Erreur upload photo", 'error');
+      addToast("Erreur upload photo", 'error');
     } finally {
       setPhotoUploading(false);
       if (fileInputRef.current) {
@@ -991,11 +992,11 @@ export default function CrmCardModal({
       });
 
       if (response.ok) {
-        toast.addToast(`Récapitulatif envoyé à ${response.data?.sentTo || client.email}`, 'success');
+        addToast(`Récapitulatif envoyé à ${response.data?.sentTo || client.email}`, 'success');
       }
     } catch (error) {
       console.error('[CRM] failed to send timeline email', error);
-      toast.addToast("Erreur lors de l'envoi", 'error');
+      addToast("Erreur lors de l'envoi", 'error');
     } finally {
       setTimelineSending(false);
     }
@@ -1047,11 +1048,11 @@ export default function CrmCardModal({
           checklists: localChecklists,
         }),
       });
-      toast.addToast('Checklist sauvegardée', 'success');
+      addToast('Checklist sauvegardée', 'success');
       // No need to refetch - local state is already updated
     } catch (error) {
       console.error('[CRM] checklist save failed', error);
-      toast.addToast("Erreur sauvegarde checklist", 'error');
+      addToast("Erreur sauvegarde checklist", 'error');
     } finally {
       setChecklistSaving(false);
     }
@@ -2236,7 +2237,7 @@ export default function CrmCardModal({
           open={showTestPreview}
           onClose={() => setShowTestPreview(false)}
           clientEmail={client?.email}
-          onSendEmail={async () => { toast.addToast("Test - non envoyé", "info"); }}
+          onSendEmail={async () => { addToast("Test - non envoyé", "info"); }}
           isSending={false}
           data={{
             quoteNumber: "TEST-CRM",
@@ -2266,7 +2267,7 @@ export default function CrmCardModal({
           onClose={() => setPreviewData(null)}
           clientEmail={client?.email}
           onSendEmail={async () => {
-            toast.addToast("Fonction email à implémenter", "info");
+            addToast("Fonction email à implémenter", "info");
           }}
           isSending={false}
           data={{
