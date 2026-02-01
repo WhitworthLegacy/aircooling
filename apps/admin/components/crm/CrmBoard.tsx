@@ -15,15 +15,16 @@ import { CRM_STAGES } from "@/lib/constants";
 import CrmCardModal from "./CrmCardModal";
 import { CrmClient, CrmColumn } from "./types";
 
+// Active columns displayed on the board (Terminé and Perdu are handled via checkboxes in modal)
 const COLUMNS: CrmColumn[] = [
   { id: "1", slug: CRM_STAGES.NOUVEAU, label: "Nouveau", color: "#6b7280" },
-  { id: "2", slug: CRM_STAGES.A_CONTACTER, label: "A contacter", color: "#f59e0b" },
-  { id: "3", slug: CRM_STAGES.VISITE_PLANIFIEE, label: "Visite planifiée", color: "#3b82f6" },
-  { id: "4", slug: CRM_STAGES.DEVIS_ENVOYE, label: "Devis envoyé", color: "#8b5cf6" },
-  { id: "5", slug: CRM_STAGES.INTERVENTION, label: "Intervention", color: "#6366f1" },
-  { id: "6", slug: CRM_STAGES.TERMINE, label: "Terminé", color: "#22c55e" },
-  { id: "7", slug: CRM_STAGES.PERDU, label: "Perdu", color: "#ef4444" },
+  { id: "2", slug: CRM_STAGES.VISITE_PLANIFIEE, label: "Visite planifiée", color: "#3b82f6" },
+  { id: "3", slug: CRM_STAGES.DEVIS_ENVOYE, label: "Devis envoyé", color: "#8b5cf6" },
+  { id: "4", slug: CRM_STAGES.INTERVENTION, label: "Intervention", color: "#6366f1" },
 ];
+
+// Hidden stages (clients are filtered out from board view)
+const HIDDEN_STAGES = [CRM_STAGES.TERMINE, CRM_STAGES.PERDU, CRM_STAGES.A_CONTACTER];
 
 const SYSTEM_TYPES = [
   { value: '', label: 'Type de système' },
@@ -86,15 +87,21 @@ export default function CrmBoard() {
   }, [fetchClients]);
 
   const filteredClients = useMemo(() => {
-    if (!searchTerm) return clients;
-    const term = searchTerm.toLowerCase();
-    return clients.filter(
-      (c) =>
-        c.name.toLowerCase().includes(term) ||
-        c.email.toLowerCase().includes(term) ||
-        c.phone.includes(term) ||
-        (c.city || '').toLowerCase().includes(term)
-    );
+    // First, filter out clients with hidden stages (Terminé, Perdu, A contacter)
+    let result = clients.filter((c) => !HIDDEN_STAGES.includes(c.stage || ''));
+
+    // Then apply search filter
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      result = result.filter(
+        (c) =>
+          c.name.toLowerCase().includes(term) ||
+          c.email.toLowerCase().includes(term) ||
+          c.phone.includes(term) ||
+          (c.city || '').toLowerCase().includes(term)
+      );
+    }
+    return result;
   }, [clients, searchTerm]);
 
   const clientsByStage = useMemo(() => {

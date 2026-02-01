@@ -231,6 +231,12 @@ export default function CrmCardModal({
   const [localChecklists, setLocalChecklists] = useState<Record<string, ChecklistGroup[]>>({});
   const [checklistSaving, setChecklistSaving] = useState(false);
 
+  // Confirmation dialogs for Terminé/Perdu
+  const [showTermineConfirm, setShowTermineConfirm] = useState(false);
+  const [showPerduConfirm, setShowPerduConfirm] = useState(false);
+  const [closeComment, setCloseComment] = useState('');
+  const [closingSaving, setClosingSaving] = useState(false);
+
   const stageOptions = useMemo(
     () => columns.map((col) => ({ value: col.slug, label: col.label })),
     [columns]
@@ -407,6 +413,44 @@ export default function CrmCardModal({
   const handleStageSelect = async (nextStage: string) => {
     if (!client || !onStageChange) return;
     await onStageChange(client.id, nextStage);
+  };
+
+  // Handle marking client as Terminé or Perdu with comment
+  const handleCloseClient = async (stage: 'Terminé' | 'Perdu') => {
+    if (!client || !onStageChange) return;
+    setClosingSaving(true);
+    try {
+      // Add comment to notes if provided
+      if (closeComment.trim()) {
+        const timestamp = new Date().toLocaleString('fr-BE', {
+          day: '2-digit',
+          month: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        const label = stage === 'Terminé' ? '✅ TERMINÉ' : '❌ PERDU';
+        const updatedNotes = `${localNotes}${localNotes ? '\n' : ''}[${timestamp}] ${label}: ${closeComment.trim()}`;
+        setLocalNotes(updatedNotes);
+        if (onNotesChange) {
+          await onNotesChange(client.id, updatedNotes);
+        }
+      }
+
+      // Update stage
+      await onStageChange(client.id, stage);
+      toast.addToast(stage === 'Terminé' ? 'Intervention terminée' : 'Client marqué comme perdu', 'success');
+
+      // Reset and close dialogs
+      setCloseComment('');
+      setShowTermineConfirm(false);
+      setShowPerduConfirm(false);
+      onClose();
+    } catch (error) {
+      console.error('[CRM] failed to close client', error);
+      toast.addToast("Erreur lors de la mise à jour", 'error');
+    } finally {
+      setClosingSaving(false);
+    }
   };
 
   const handleSaveClientInfo = async () => {
@@ -959,12 +1003,32 @@ export default function CrmCardModal({
             <select
               value={client.stage}
               onChange={(e) => handleStageSelect(e.target.value)}
-              className="min-w-[160px] rounded-xl border border-airBorder px-3 py-2 text-sm font-semibold text-airDark focus:outline-none focus:ring-2 focus:ring-airPrimary bg-white"
+              className="min-w-[140px] rounded-xl border border-airBorder px-3 py-2 text-sm font-semibold text-airDark focus:outline-none focus:ring-2 focus:ring-airPrimary bg-white"
             >
               {stageOptions.map((stage) => (
                 <option key={stage.value} value={stage.value}>{stage.label}</option>
               ))}
             </select>
+
+            {/* Terminé / Perdu buttons */}
+            <div className="flex items-center gap-2 ml-2">
+              <button
+                onClick={() => setShowTermineConfirm(true)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-green-100 text-green-700 hover:bg-green-200 transition text-sm font-medium"
+                title="Marquer comme terminé"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                Terminé
+              </button>
+              <button
+                onClick={() => setShowPerduConfirm(true)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-100 text-red-700 hover:bg-red-200 transition text-sm font-medium"
+                title="Marquer comme perdu"
+              >
+                <X className="w-4 h-4" />
+                Perdu
+              </button>
+            </div>
           </div>
 
           {/* Tabs */}
@@ -2102,6 +2166,124 @@ export default function CrmCardModal({
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Terminé Confirmation Modal */}
+      <Modal
+        isOpen={showTermineConfirm}
+        onClose={() => {
+          setShowTermineConfirm(false);
+          setCloseComment('');
+        }}
+        title="Confirmer la fin d'intervention"
+        size="md"
+      >
+        <div className="space-y-4">
+          <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                <CheckCircle2 className="w-6 h-6 text-green-600" />
+              </div>
+              <div>
+                <p className="font-semibold text-green-800">L&apos;intervention est terminée ?</p>
+                <p className="text-sm text-green-700">Le client sera archivé et retiré du pipeline CRM.</p>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-airDark mb-2">
+              Commentaire de clôture (optionnel)
+            </label>
+            <textarea
+              value={closeComment}
+              onChange={(e) => setCloseComment(e.target.value)}
+              placeholder="Ex: Installation réussie, client satisfait..."
+              className="w-full rounded-xl border border-airBorder px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 min-h-[100px] resize-none"
+            />
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setShowTermineConfirm(false);
+                setCloseComment('');
+              }}
+              className="flex-1"
+            >
+              Annuler
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => handleCloseClient('Terminé')}
+              loading={closingSaving}
+              icon={<CheckCircle2 className="w-4 h-4" />}
+              className="flex-1 !bg-green-600 hover:!bg-green-700"
+            >
+              Confirmer
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Perdu Confirmation Modal */}
+      <Modal
+        isOpen={showPerduConfirm}
+        onClose={() => {
+          setShowPerduConfirm(false);
+          setCloseComment('');
+        }}
+        title="Marquer comme perdu"
+        size="md"
+      >
+        <div className="space-y-4">
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                <X className="w-6 h-6 text-red-600" />
+              </div>
+              <div>
+                <p className="font-semibold text-red-800">Marquer ce client comme perdu ?</p>
+                <p className="text-sm text-red-700">Le client sera archivé et retiré du pipeline CRM.</p>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-airDark mb-2">
+              Raison de la perte (recommandé)
+            </label>
+            <textarea
+              value={closeComment}
+              onChange={(e) => setCloseComment(e.target.value)}
+              placeholder="Ex: Trop cher, a choisi un concurrent, pas de réponse..."
+              className="w-full rounded-xl border border-airBorder px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 min-h-[100px] resize-none"
+            />
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setShowPerduConfirm(false);
+                setCloseComment('');
+              }}
+              className="flex-1"
+            >
+              Annuler
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => handleCloseClient('Perdu')}
+              loading={closingSaving}
+              icon={<X className="w-4 h-4" />}
+              className="flex-1 !bg-red-600 hover:!bg-red-700"
+            >
+              Confirmer
+            </Button>
+          </div>
+        </div>
       </Modal>
     </>
   );
