@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     // 1. Verify client exists and get their info
     const { data: client, error: clientError } = await supabase
       .from("clients")
-      .select("id, first_name, last_name, email, phone, address, city")
+      .select("id, first_name, last_name, email, phone, address_line1, city")
       .eq("id", data.client_id)
       .single();
 
