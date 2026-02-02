@@ -27,7 +27,6 @@ export async function GET(request: NextRequest) {
         `
         *,
         clients(id, first_name, last_name, phone, email),
-        profiles!tech_reports_technician_id_fkey(id, full_name, email),
         quotes(id, quote_number, total, status),
         tech_report_items(
           id,
