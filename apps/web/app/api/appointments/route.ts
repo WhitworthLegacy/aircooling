@@ -88,6 +88,7 @@ export async function POST(request: NextRequest) {
       driver_id,
       driver_name,
       duration_minutes,
+      technician_id,
     } = body;
 
     if (!service_type) {
@@ -118,6 +119,7 @@ export async function POST(request: NextRequest) {
         notes: notes || null,
         driver_id: driver_id || null,
         driver_name: driver_name || null,
+        technician_id: technician_id || null,
       })
       .select()
       .single();
@@ -169,7 +171,7 @@ export async function PATCH(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { id, status, date, slot, notes, driver_id, driver_name } = body;
+    const { id, status, date, slot, notes, driver_id, driver_name, technician_id } = body;
 
     if (!id) {
       return jsonError("VALIDATION_ERROR", "id is required", requestId, 400);
@@ -184,6 +186,7 @@ export async function PATCH(request: NextRequest) {
     if (notes !== undefined) updateData.notes = notes;
     if (driver_id !== undefined) updateData.driver_id = driver_id;
     if (driver_name !== undefined) updateData.driver_name = driver_name;
+    if (technician_id !== undefined) updateData.technician_id = technician_id;
 
     // If date/slot provided, update scheduled_at
     if (date && slot) {

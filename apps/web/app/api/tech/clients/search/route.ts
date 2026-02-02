@@ -39,34 +39,12 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseAdmin();
 
-    // Build query - search for exact matches (case-insensitive)
-    let query = supabase
+    // Build query - fetch all clients and filter in code
+    // This approach is more reliable for matching 2/3 fields
+    const { data: potentialMatches, error } = await supabase
       .from("clients")
       .select("id, first_name, last_name, phone, email, city, address, plan_image_url")
-      .limit(10);
-
-    // We'll fetch clients and filter in code to count matches
-    // This is more flexible than complex SQL conditions
-
-    const conditions: string[] = [];
-    if (first_name?.trim()) {
-      conditions.push(`first_name.ilike.%${first_name.trim()}%`);
-    }
-    if (last_name?.trim()) {
-      conditions.push(`last_name.ilike.%${last_name.trim()}%`);
-    }
-    if (phone?.trim()) {
-      // Normalize phone for search (remove spaces, dashes)
-      const normalizedPhone = phone.trim().replace(/[\s\-\.]/g, "");
-      conditions.push(`phone.ilike.%${normalizedPhone}%`);
-    }
-
-    // If we have conditions, apply them with OR to get potential matches
-    if (conditions.length > 0) {
-      query = query.or(conditions.join(","));
-    }
-
-    const { data: potentialMatches, error } = await query;
+      .limit(500);
 
     if (error) {
       console.error("[tech/clients/search] Search error:", error);

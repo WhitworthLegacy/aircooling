@@ -12,14 +12,19 @@ function getSupabaseServiceRole() {
   );
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const requestId = crypto.randomUUID();
 
   const auth = await requireAdmin();
   if ("error" in auth && auth.error) return auth.error;
 
-  const role = auth.user?.user_metadata?.role;
-  if (role !== "super_admin") {
+  // Admins can fetch technicians list, super_admin can fetch all
+  const userRole = auth.role;
+  const { searchParams } = new URL(request.url);
+  const filterRole = searchParams.get("role");
+
+  // If not super_admin, only allow fetching technicians
+  if (userRole !== "super_admin" && filterRole !== "technicien") {
     return jsonError("FORBIDDEN", "Réservé aux super administrateurs", requestId, 403);
   }
 
@@ -41,7 +46,7 @@ export async function GET() {
       (profilesResult.data || []).map((p) => [p.id, p])
     );
 
-    const users = (authResult.data.users || []).map((u) => {
+    let users = (authResult.data.users || []).map((u) => {
       const profile = profileMap.get(u.id);
       return {
         id: u.id,
@@ -56,6 +61,11 @@ export async function GET() {
       };
     });
 
+    // Filter by role if specified
+    if (filterRole) {
+      users = users.filter((u) => u.role === filterRole);
+    }
+
     return jsonOk({ users });
   } catch (error) {
     console.error(`[admin/users] requestId=${requestId}`, error);
@@ -69,8 +79,7 @@ export async function POST(request: NextRequest) {
   const auth = await requireAdmin();
   if ("error" in auth && auth.error) return auth.error;
 
-  const role = auth.user?.user_metadata?.role;
-  if (role !== "super_admin") {
+  if (auth.role !== "super_admin") {
     return jsonError("FORBIDDEN", "Réservé aux super administrateurs", requestId, 403);
   }
 

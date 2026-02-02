@@ -63,6 +63,12 @@ type Client = {
   address?: string;
 };
 
+type Technician = {
+  id: string;
+  full_name?: string;
+  email?: string;
+};
+
 const TIME_SLOTS = ['09:00', '10:30', '12:00', '13:30', '15:00', '16:30'];
 
 function getSlotEndTime(startTime: string): string {
@@ -135,6 +141,7 @@ export default function AppointmentsPage() {
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [newModalOpen, setNewModalOpen] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
+  const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [saving, setSaving] = useState(false);
   const toast = useToast();
   const { role } = useUserRole();
@@ -149,26 +156,35 @@ export default function AppointmentsPage() {
     slot: '09:00',
     address: '',
     notes: '',
+    technician_id: '',
   });
 
   const weekDates = useMemo(() => getWeekDates(currentWeekStart), [currentWeekStart]);
   const today = formatDateKey(new Date());
 
   const fetchAppointments = useCallback(async () => {
+    if (!role) return; // Wait for role to load
+
     setLoading(true);
     setError(null);
     try {
       const startDate = formatDateKey(weekDates[0]);
       const endDate = formatDateKey(weekDates[6]);
 
+      // Technicians see only their own appointments
+      const apiUrl = role === 'technicien'
+        ? `/api/tech/appointments?start_date=${startDate}&end_date=${endDate}`
+        : `/api/appointments?start_date=${startDate}&end_date=${endDate}`;
+
       const response = await apiFetch<{
         success: boolean;
+        appointments?: Array<Record<string, unknown>>;
         data?: { rows?: Array<Record<string, unknown>> } | Array<Record<string, unknown>>;
-      }>(`/api/appointments?start_date=${startDate}&end_date=${endDate}`);
+      }>(apiUrl);
 
-      const rows = Array.isArray(response.data)
-        ? response.data
-        : (response.data?.rows || []);
+      // Handle different response formats
+      const rows = response.appointments
+        || (Array.isArray(response.data) ? response.data : (response.data?.rows || []));
 
       setAppointments(
         rows.map((row) => ({
@@ -200,7 +216,7 @@ export default function AppointmentsPage() {
     } finally {
       setLoading(false);
     }
-  }, [weekDates]);
+  }, [weekDates, role]);
 
   const loadClients = async () => {
     try {
@@ -228,6 +244,29 @@ export default function AppointmentsPage() {
     }
   };
 
+  const loadTechnicians = async () => {
+    try {
+      const payload = await apiFetch<{
+        success: boolean;
+        users?: Array<{
+          id: string;
+          full_name?: string;
+          email?: string;
+          role?: string;
+        }>;
+      }>('/api/admin/users?role=technicien');
+
+      const rows = payload.users || [];
+      setTechnicians(rows.map(t => ({
+        id: t.id,
+        full_name: t.full_name || t.email || 'Technicien',
+        email: t.email,
+      })));
+    } catch (err) {
+      console.error('[appointments] load technicians failed', err);
+    }
+  };
+
   useEffect(() => {
     fetchAppointments();
   }, [fetchAppointments]);
@@ -235,6 +274,7 @@ export default function AppointmentsPage() {
   useEffect(() => {
     if (newModalOpen) {
       loadClients();
+      loadTechnicians();
     }
   }, [newModalOpen]);
 
@@ -351,6 +391,7 @@ export default function AppointmentsPage() {
       slot: '09:00',
       address: '',
       notes: '',
+      technician_id: '',
     });
     setNewModalOpen(true);
   };
@@ -384,6 +425,7 @@ export default function AppointmentsPage() {
           slot: newForm.slot,
           address: newForm.address,
           notes: newForm.notes,
+          technician_id: newForm.technician_id || null,
         }),
       });
       toast.addToast('RDV créé avec succès', 'success');
@@ -931,6 +973,27 @@ export default function AppointmentsPage() {
             onChange={(e) => setNewForm((prev) => ({ ...prev, address: e.target.value }))}
             placeholder="Adresse complète"
           />
+
+          {/* Technician assignment - only for admins */}
+          {canCreate && (
+            <div>
+              <label className="block text-xs font-semibold text-airPrimary mb-1">
+                Technicien assigné
+              </label>
+              <select
+                value={newForm.technician_id}
+                onChange={(e) => setNewForm((prev) => ({ ...prev, technician_id: e.target.value }))}
+                className="w-full rounded-xl border border-airBorder px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-airPrimary"
+              >
+                <option value="">-- Non assigné --</option>
+                {technicians.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.full_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div>
             <label className="block text-xs font-semibold text-airPrimary mb-1">Notes</label>
