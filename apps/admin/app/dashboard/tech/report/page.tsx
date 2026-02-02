@@ -640,7 +640,7 @@ export default function TechReportPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
+    <div className="min-h-screen bg-gray-50 pb-32">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-4 py-4">
         <div className="max-w-lg mx-auto">
@@ -682,11 +682,11 @@ export default function TechReportPage() {
       </div>
 
       {/* Content */}
-      <div className="max-w-lg mx-auto px-4 py-6">{renderStep()}</div>
+      <div className="max-w-lg mx-auto px-4 py-6">
+        {renderStep()}
 
-      {/* Footer navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-4">
-        <div className="max-w-lg mx-auto flex gap-3">
+        {/* Navigation buttons - inside page content */}
+        <div className="flex gap-3 mt-8 pt-4 border-t border-gray-200">
           {currentStep > 1 && (
             <Button
               variant="ghost"
