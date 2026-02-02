@@ -135,6 +135,11 @@ export default function CrmBoard() {
       notes: client.notes,
       systemType: client.systemType,
       zone: client.zone,
+      isProspect: client.isProspect,
+      prospectId: client.prospectId,
+      demandType: client.demandType,
+      typeClient: client.typeClient,
+      tva: client.tva,
     });
     setModalOpen(true);
   };
@@ -358,12 +363,31 @@ export default function CrmBoard() {
                       onClick={() => openModal(client)}
                       className="group rounded-2xl border border-airBorder bg-white/90 p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md cursor-pointer"
                     >
-                      <h4 className="font-semibold text-airDark text-sm truncate">
-                        {client.name}
-                      </h4>
+                      <div className="flex items-start justify-between gap-2">
+                        <h4 className="font-semibold text-airDark text-sm truncate flex-1">
+                          {client.name}
+                        </h4>
+                        <div className="flex gap-1 shrink-0">
+                          {client.typeClient === 'Professionnel' && (
+                            <Badge size="sm" className="bg-blue-100 text-blue-700 border-blue-200">
+                              Pro
+                            </Badge>
+                          )}
+                          {client.isProspect && (
+                            <Badge size="sm" className="bg-amber-100 text-amber-700 border-amber-200">
+                              Prospect
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
                       <p className="text-xs text-airMuted mt-1">
                         N° {trackingId}
                       </p>
+                      {client.demandType && (
+                        <p className="text-xs text-airPrimary font-medium mt-1">
+                          {client.demandType}
+                        </p>
+                      )}
                       {client.phone && (
                         <div className="flex items-center gap-1 mt-2 text-xs text-airMuted">
                           <Phone className="w-3 h-3" />

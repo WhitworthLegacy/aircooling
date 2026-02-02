@@ -479,6 +479,21 @@ export default function CrmCardModal({
     }
   };
 
+  const handleConvertToClient = async () => {
+    if (!client) return;
+    try {
+      await apiFetch(`/api/clients/${client.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ is_prospect: false }),
+      });
+      addToast("Converti en client", 'success');
+      onClientPatch?.(client.id, { isProspect: false });
+    } catch (error) {
+      console.error('[CRM] failed to convert prospect', error);
+      addToast("Erreur lors de la conversion", 'error');
+    }
+  };
+
   const handleSaveClientInfo = async () => {
     if (!client) return;
     setEditSaving(true);
@@ -1181,8 +1196,18 @@ export default function CrmCardModal({
               ))}
             </select>
 
-            {/* Terminé / Perdu buttons */}
+            {/* Terminé / Perdu / Convert buttons */}
             <div className="flex items-center gap-2 ml-2">
+              {client.isProspect && (
+                <button
+                  onClick={handleConvertToClient}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-100 text-amber-700 hover:bg-amber-200 transition text-sm font-medium"
+                  title="Convertir en client"
+                >
+                  <User className="w-4 h-4" />
+                  Convertir en client
+                </button>
+              )}
               <button
                 onClick={() => setShowTermineConfirm(true)}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-green-100 text-green-700 hover:bg-green-200 transition text-sm font-medium"
@@ -1308,7 +1333,25 @@ export default function CrmCardModal({
                   ) : (
                     <div className="grid md:grid-cols-2 gap-4">
                       <div className="space-y-2 text-sm">
-                        <h3 className="text-lg font-bold text-airDark">{client.name}</h3>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="text-lg font-bold text-airDark">{client.name}</h3>
+                          {client.typeClient === 'Professionnel' && (
+                            <Badge size="sm" className="bg-blue-100 text-blue-700 border-blue-200">
+                              Pro
+                            </Badge>
+                          )}
+                          {client.isProspect && (
+                            <Badge size="sm" className="bg-amber-100 text-amber-700 border-amber-200">
+                              Prospect
+                            </Badge>
+                          )}
+                        </div>
+                        {client.tva && (
+                          <p className="text-xs text-airMuted">TVA: {client.tva}</p>
+                        )}
+                        {client.demandType && (
+                          <p className="text-sm text-airPrimary font-medium">{client.demandType}</p>
+                        )}
                         <div className="flex items-center gap-2">
                           <Phone className="w-4 h-4 text-airMuted" />
                           <a href={`tel:${client.phone}`} className="text-airPrimary font-medium">{client.phone || '—'}</a>

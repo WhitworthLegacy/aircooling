@@ -127,6 +127,26 @@ export async function POST(request: NextRequest) {
       return jsonError("DATABASE_ERROR", "Failed to create appointment", requestId, 500);
     }
 
+    // 🔄 Auto-stage transition based on service_type
+    if (client_id) {
+      const isVisitType = ['devis', 'diagnostic'].includes(service_type);
+      const isInterventionType = ['installation', 'entretien', 'depannage'].includes(service_type);
+
+      if (isVisitType) {
+        await supabase
+          .from('clients')
+          .update({ crm_stage: 'Visite planifiée' })
+          .eq('id', client_id);
+        console.info(`[appointments] Auto-moved client ${client_id} to "Visite planifiée"`);
+      } else if (isInterventionType) {
+        await supabase
+          .from('clients')
+          .update({ crm_stage: 'Intervention' })
+          .eq('id', client_id);
+        console.info(`[appointments] Auto-moved client ${client_id} to "Intervention"`);
+      }
+    }
+
     return jsonOk({
       success: true,
       appointment: {

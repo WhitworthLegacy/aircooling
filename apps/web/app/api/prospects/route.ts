@@ -8,49 +8,117 @@ import { generateProspectNotificationHtml } from "@/lib/pdf/prospect-email";
 import { resend, FROM_EMAIL, getBaseUrl } from "@/lib/resend";
 import { sendWelcomeEmail } from "@/lib/emails/nurturing";
 
+// Schema accepts both old French field names (for backwards compat) and new English names
 const ProspectSchema = z.object({
   type_client: z.enum(["Particulier", "Professionnel"]).default("Particulier"),
-  nom: z.string().min(2, "Le nom est requis"),
-  telephone: z.string().min(1, "Le téléphone est requis"),
+  // Support both nom/first_name
+  nom: z.string().min(2, "Le nom est requis").optional(),
+  first_name: z.string().min(2, "Le nom est requis").optional(),
+  last_name: z.string().optional(),
+  // Support both telephone/phone
+  telephone: z.string().min(1, "Le téléphone est requis").optional(),
+  phone: z.string().min(1, "Le téléphone est requis").optional(),
   email: z.string().email("Email invalide"),
   tva: z.string().optional(),
   source: z.string().default("Site web"),
-  adresse: z.string().min(1, "L'adresse est requise"),
-  localite: z.string().min(1, "La localité est requise"),
-  code_postal: z.string().min(1, "Le code postal est requis"),
-  type_demande: z.string().min(1, "Le type de demande est requis"),
-  description_demande: z.string().min(1, "La description est requise"),
+  // Support both adresse/address_line1
+  adresse: z.string().min(1, "L'adresse est requise").optional(),
+  address_line1: z.string().min(1, "L'adresse est requise").optional(),
+  // Support both localite/city
+  localite: z.string().min(1, "La localité est requise").optional(),
+  city: z.string().min(1, "La localité est requise").optional(),
+  // Support both code_postal/postal_code
+  code_postal: z.string().min(1, "Le code postal est requis").optional(),
+  postal_code: z.string().min(1, "Le code postal est requis").optional(),
+  // Support both type_demande/demand_type
+  type_demande: z.string().min(1, "Le type de demande est requis").optional(),
+  demand_type: z.string().min(1, "Le type de demande est requis").optional(),
+  // Support both description_demande/demand_description
+  description_demande: z.string().min(1, "La description est requise").optional(),
+  demand_description: z.string().min(1, "La description est requise").optional(),
+  // Support both marque_souhaitee/preferred_brand
   marque_souhaitee: z.string().optional(),
+  preferred_brand: z.string().optional(),
+  // Support both nombre_unites/unit_count
   nombre_unites: z.number().int().positive().optional(),
-});
+  unit_count: z.number().int().positive().optional(),
+}).refine(
+  (data) => data.nom || data.first_name,
+  { message: "Le nom est requis", path: ["nom"] }
+).refine(
+  (data) => data.telephone || data.phone,
+  { message: "Le téléphone est requis", path: ["telephone"] }
+).refine(
+  (data) => data.adresse || data.address_line1,
+  { message: "L'adresse est requise", path: ["adresse"] }
+).refine(
+  (data) => data.localite || data.city,
+  { message: "La localité est requise", path: ["localite"] }
+).refine(
+  (data) => data.code_postal || data.postal_code,
+  { message: "Le code postal est requis", path: ["code_postal"] }
+).refine(
+  (data) => data.type_demande || data.demand_type,
+  { message: "Le type de demande est requis", path: ["type_demande"] }
+).refine(
+  (data) => data.description_demande || data.demand_description,
+  { message: "La description est requise", path: ["description_demande"] }
+);
+
+// Helper to normalize field names (support old French + new English names)
+function normalizeProspectData(data: z.infer<typeof ProspectSchema>) {
+  const firstName = data.first_name || (data.nom ? data.nom.split(' ')[0] : '');
+  const lastName = data.last_name || (data.nom ? data.nom.split(' ').slice(1).join(' ') : '');
+
+  return {
+    first_name: firstName,
+    last_name: lastName,
+    phone: data.phone || data.telephone || '',
+    email: data.email,
+    tva: data.tva,
+    source: data.source,
+    address_line1: data.address_line1 || data.adresse || '',
+    city: data.city || data.localite || '',
+    postal_code: data.postal_code || data.code_postal || '',
+    demand_type: data.demand_type || data.type_demande || '',
+    demand_description: data.demand_description || data.description_demande || '',
+    preferred_brand: data.preferred_brand || data.marque_souhaitee,
+    unit_count: data.unit_count || data.nombre_unites,
+    type_client: data.type_client,
+    // Full name for display
+    fullName: `${firstName} ${lastName}`.trim() || data.nom || '',
+  };
+}
 
 export async function POST(request: NextRequest) {
   const requestId = crypto.randomUUID();
 
   try {
     const body = await request.json();
-    const data = ProspectSchema.parse(body);
+    const rawData = ProspectSchema.parse(body);
+    const data = normalizeProspectData(rawData);
 
     const supabase = getSupabaseAdmin();
 
-    // 1. Insert prospect
+    // 1. Insert prospect (using new aligned column names)
     const { data: prospect, error: insertError } = await supabase
       .from("prospects")
       .insert({
         type_client: data.type_client,
-        nom: data.nom,
-        telephone: data.telephone || null,
+        first_name: data.first_name,
+        last_name: data.last_name || null,
+        phone: data.phone || null,
         email: data.email || null,
         tva: data.tva || null,
         source: data.source,
-        adresse: data.adresse || null,
-        localite: data.localite || null,
-        code_postal: data.code_postal || null,
-        type_demande: data.type_demande || null,
-        description_demande: data.description_demande || null,
-        marque_souhaitee: data.marque_souhaitee || null,
-        nombre_unites: data.nombre_unites || null,
-        statut: "Nouveau",
+        address_line1: data.address_line1 || null,
+        city: data.city || null,
+        postal_code: data.postal_code || null,
+        demand_type: data.demand_type || null,
+        demand_description: data.demand_description || null,
+        preferred_brand: data.preferred_brand || null,
+        unit_count: data.unit_count || null,
+        crm_stage: "Nouveau",
       })
       .select()
       .single();
@@ -70,18 +138,18 @@ export async function POST(request: NextRequest) {
         created_at: prospect.created_at,
         updated_at: prospect.updated_at,
         type_client: data.type_client,
-        nom: data.nom,
-        telephone: data.telephone,
+        nom: data.fullName,
+        telephone: data.phone,
         email: data.email,
         tva: data.tva,
         source: data.source,
-        adresse: data.adresse,
-        localite: data.localite,
-        code_postal: data.code_postal,
-        type_demande: data.type_demande,
-        description_demande: data.description_demande,
-        marque_souhaitee: data.marque_souhaitee,
-        nombre_unites: data.nombre_unites,
+        adresse: data.address_line1,
+        localite: data.city,
+        code_postal: data.postal_code,
+        type_demande: data.demand_type,
+        description_demande: data.demand_description,
+        marque_souhaitee: data.preferred_brand,
+        nombre_unites: data.unit_count,
         statut: "Nouveau",
       });
 
@@ -128,15 +196,15 @@ export async function POST(request: NextRequest) {
 
       const html = generateProspectNotificationHtml({
         prospectId: prospect.id,
-        nom: data.nom,
-        telephone: data.telephone,
+        nom: data.fullName,
+        telephone: data.phone,
         email: data.email,
         type_client: data.type_client,
-        type_demande: data.type_demande,
-        adresse: data.adresse,
-        localite: data.localite,
-        code_postal: data.code_postal,
-        description_demande: data.description_demande,
+        type_demande: data.demand_type,
+        adresse: data.address_line1,
+        localite: data.city,
+        code_postal: data.postal_code,
+        description_demande: data.demand_description,
         createdAt,
         adminUrl: `${baseUrl}/admin/prospects`,
       });
@@ -144,7 +212,7 @@ export async function POST(request: NextRequest) {
       await resend.emails.send({
         from: FROM_EMAIL,
         to: adminEmail,
-        subject: `Nouveau prospect : ${data.nom} – ${data.type_demande || "Demande de devis"}`,
+        subject: `Nouveau prospect : ${data.fullName} – ${data.demand_type || "Demande de devis"}`,
         html,
       });
 
@@ -159,9 +227,9 @@ export async function POST(request: NextRequest) {
       try {
         await sendWelcomeEmail({
           to: data.email,
-          prospectName: data.nom,
+          prospectName: data.fullName,
           prospectId: prospect.id,
-          demandType: data.type_demande,
+          demandType: data.demand_type,
         });
         console.info(`[prospects] ✅ Welcome email sent to ${data.email} (nurturing T+0)`);
       } catch (welcomeError) {
@@ -170,8 +238,45 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 5. 🔄 Create client entry in CRM with "Nouveau" stage and prospect badge
+    let clientId: string | null = null;
+    try {
+      const { data: client, error: clientError } = await supabase
+        .from("clients")
+        .insert({
+          first_name: data.first_name,
+          last_name: data.last_name || null,
+          email: data.email || null,
+          phone: data.phone || null,
+          address_line1: data.address_line1 || null,
+          city: data.city || null,
+          postal_code: data.postal_code || null,
+          notes: data.demand_description || null,
+          source: data.source || "Site web",
+          crm_stage: "Nouveau",
+          is_prospect: true,
+          prospect_id: prospect.id,
+          demand_type: data.demand_type || null,
+          type_client: data.type_client,
+          tva: data.tva || null,
+        })
+        .select("id")
+        .single();
+
+      if (clientError) {
+        console.error("[prospects] Client creation error:", clientError);
+      } else {
+        clientId = client.id;
+        console.info(`[prospects] ✅ Client created in CRM: ${clientId} (is_prospect=true)`);
+      }
+    } catch (clientCreateError) {
+      console.error("[prospects] Client creation failed:", clientCreateError);
+      // Non-blocking: prospect is still created
+    }
+
     return jsonCreated({
       prospect_id: prospect.id,
+      client_id: clientId,
       pdf_url: pdfUrl,
       message: "Votre demande de devis a été envoyée avec succès.",
     });
@@ -194,7 +299,7 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseAdmin();
     const { searchParams } = new URL(request.url);
-    const statut = searchParams.get("statut");
+    const stage = searchParams.get("stage") || searchParams.get("statut");
     const limit = parseInt(searchParams.get("limit") || "50");
     const offset = parseInt(searchParams.get("offset") || "0");
 
@@ -204,8 +309,8 @@ export async function GET(request: NextRequest) {
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);
 
-    if (statut && statut !== "all") {
-      query = query.eq("statut", statut);
+    if (stage && stage !== "all") {
+      query = query.eq("crm_stage", stage);
     }
 
     const { data: prospects, error, count } = await query;

@@ -23,6 +23,11 @@ export type SheetClientRow = {
   notes_internes?: string;
   created_at?: string;
   workflow_state?: Record<string, unknown>;
+  is_prospect?: boolean;
+  prospect_id?: string;
+  demand_type?: string;
+  type_client?: string;
+  tva?: string;
   [key: string]: unknown;
 };
 
@@ -45,6 +50,11 @@ export type AdminClient = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   checklists?: Record<string, any>;
   selected_parts?: unknown;
+  isProspect?: boolean;
+  prospectId?: string;
+  demandType?: string;
+  typeClient?: string;
+  tva?: string;
 };
 
 export function normalizeClientRow(row: SheetClientRow): AdminClient {
@@ -70,6 +80,11 @@ export function normalizeClientRow(row: SheetClientRow): AdminClient {
     createdAt: row.created_at || "",
     trackingId: formatTrackingId(id),
     workflow_state: row.workflow_state,
+    isProspect: row.is_prospect || false,
+    prospectId: row.prospect_id,
+    demandType: row.demand_type,
+    typeClient: row.type_client || 'Particulier',
+    tva: row.tva,
   };
 }
 

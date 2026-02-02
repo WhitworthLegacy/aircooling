@@ -16,6 +16,11 @@ export type CrmClient = {
   systemType?: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   workflow_state?: Record<string, any>;
+  isProspect?: boolean;
+  prospectId?: string;
+  demandType?: string;
+  typeClient?: string;
+  tva?: string;
 };
 
 export type CrmColumn = {

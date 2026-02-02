@@ -1,277 +1,172 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Loader2,
-  Mail,
-  Phone,
-  MapPin,
+  TrendingUp,
+  Users,
+  CheckCircle2,
+  BarChart3,
   Calendar,
-  FileText,
-  Search,
-  User,
-  MessageSquare,
-  ExternalLink,
-  X,
-  Navigation,
-  Image,
-  Clock,
-  CheckCircle,
-  XCircle,
   ArrowRight,
-  RefreshCw,
+  ExternalLink,
+  MapPin,
+  Clock,
 } from "lucide-react";
 import { PageContainer } from "@/components/layout";
-import { Badge, Button, Card, Input, Modal, Select, useToast } from "@/components/ui";
+import { Badge, Card, useToast } from "@/components/ui";
 import { apiFetch } from "@/lib/apiClient";
 
-type Prospect = {
+type ProspectStats = {
+  total: number;
+  byDemandType: Record<string, number>;
+  bySource: Record<string, number>;
+  thisWeek: number;
+  thisMonth: number;
+};
+
+type ClientStats = {
+  totalFromProspects: number;
+  converted: number; // is_prospect = false
+};
+
+type RecentDemand = {
   id: string;
   created_at: string;
-  nom: string;
-  email?: string;
-  telephone?: string;
-  type_client?: string;
-  type_demande?: string;
-  adresse?: string;
+  first_name?: string;
+  last_name?: string;
+  nom?: string;
+  city?: string;
   localite?: string;
-  code_postal?: string;
-  statut?: string;
-  notes?: string;
-  plan_image_url?: string;
-  source?: string;
+  demand_type?: string;
+  type_demande?: string;
+  client_id?: string;
 };
 
-const STATUS_OPTIONS = [
-  { value: "Nouveau", label: "Nouveau" },
-  { value: "A contacter", label: "À contacter" },
-  { value: "Contacté", label: "Contacté" },
-  { value: "Visite planifiée", label: "Visite planifiée" },
-  { value: "Devis envoyé", label: "Devis envoyé" },
-  { value: "Gagné", label: "Gagné" },
-  { value: "Perdu", label: "Perdu" },
-];
-
-const STATUS_COLORS: Record<string, string> = {
-  Nouveau: "bg-blue-100 text-blue-700",
-  "A contacter": "bg-amber-100 text-amber-700",
-  Contacté: "bg-indigo-100 text-indigo-700",
-  "Visite planifiée": "bg-purple-100 text-purple-700",
-  "Devis envoyé": "bg-cyan-100 text-cyan-700",
-  Gagné: "bg-emerald-100 text-emerald-700",
-  Perdu: "bg-red-100 text-red-700",
-};
-
-export default function ProspectsPage() {
-  const [prospects, setProspects] = useState<Prospect[]>([]);
+export default function ProspectsDashboardPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [prospectStats, setProspectStats] = useState<ProspectStats>({
+    total: 0,
+    byDemandType: {},
+    bySource: {},
+    thisWeek: 0,
+    thisMonth: 0,
+  });
+  const [clientStats, setClientStats] = useState<ClientStats>({
+    totalFromProspects: 0,
+    converted: 0,
+  });
+  const [recentDemands, setRecentDemands] = useState<RecentDemand[]>([]);
 
-  // Modal state
-  const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [noteDraft, setNoteDraft] = useState("");
-  const [localNotes, setLocalNotes] = useState("");
-  const [statusSaving, setStatusSaving] = useState(false);
-  const [converting, setConverting] = useState(false);
-
-  // Destructure only addToast to avoid dependency issues
   const { addToast } = useToast();
 
-  const fetchProspects = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const payload = await apiFetch<{ prospects: Prospect[]; total: number }>("/api/prospects");
-      setProspects(payload.prospects || []);
+      // Fetch prospects for stats
+      const prospectsRes = await apiFetch<{ prospects: RecentDemand[]; total: number }>("/api/prospects?limit=100");
+      const prospects = prospectsRes.prospects || [];
+
+      // Calculate prospect stats
+      const now = new Date();
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+      const byDemandType: Record<string, number> = {};
+      const bySource: Record<string, number> = {};
+      let thisWeek = 0;
+      let thisMonth = 0;
+
+      prospects.forEach((p) => {
+        const demandType = p.demand_type || p.type_demande || "Non spécifié";
+        byDemandType[demandType] = (byDemandType[demandType] || 0) + 1;
+
+        const createdAt = new Date(p.created_at);
+        if (createdAt >= weekAgo) thisWeek++;
+        if (createdAt >= monthAgo) thisMonth++;
+      });
+
+      setProspectStats({
+        total: prospects.length,
+        byDemandType,
+        bySource,
+        thisWeek,
+        thisMonth,
+      });
+
+      // Set recent demands (last 10)
+      setRecentDemands(prospects.slice(0, 10));
+
+      // Fetch clients to calculate conversion stats
+      const clientsRes = await apiFetch<{ clients: { id: string; is_prospect: boolean; prospect_id?: string }[] }>("/api/clients?limit=500");
+      const clients = clientsRes.clients || [];
+
+      // Count clients that came from prospects
+      const fromProspects = clients.filter((c) => c.prospect_id);
+      const converted = fromProspects.filter((c) => !c.is_prospect);
+
+      setClientStats({
+        totalFromProspects: fromProspects.length,
+        converted: converted.length,
+      });
     } catch (err) {
-      console.error("[prospects] fetch failed", err);
-      addToast("Erreur chargement prospects", "error");
+      console.error("[prospects-dashboard] fetch failed", err);
+      addToast("Erreur chargement données", "error");
     } finally {
       setLoading(false);
     }
   }, [addToast]);
 
   useEffect(() => {
-    void fetchProspects();
-  }, [fetchProspects]);
+    void fetchData();
+  }, [fetchData]);
 
-  // Optimistic update helper
-  const updateProspectInList = useCallback((prospectId: string, patch: Partial<Prospect>) => {
-    setProspects((prev) =>
-      prev.map((p) => (p.id === prospectId ? { ...p, ...patch } : p))
-    );
-    if (selectedProspect?.id === prospectId) {
-      setSelectedProspect((prev) => (prev ? { ...prev, ...patch } : prev));
-    }
-  }, [selectedProspect?.id]);
+  const conversionRate = useMemo(() => {
+    if (prospectStats.total === 0) return 0;
+    return Math.round((clientStats.converted / prospectStats.total) * 100);
+  }, [clientStats.converted, prospectStats.total]);
 
-  const filteredProspects = useMemo(() => {
-    let result = prospects;
+  const sortedDemandTypes = useMemo(() => {
+    return Object.entries(prospectStats.byDemandType)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 5);
+  }, [prospectStats.byDemandType]);
 
-    // Filter by status
-    if (filterStatus !== "all") {
-      result = result.filter((p) => p.statut === filterStatus);
-    }
-
-    // Filter by search
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      result = result.filter(
-        (p) =>
-          p.nom?.toLowerCase().includes(term) ||
-          p.email?.toLowerCase().includes(term) ||
-          p.telephone?.includes(term) ||
-          p.localite?.toLowerCase().includes(term)
-      );
-    }
-
-    return result;
-  }, [prospects, searchTerm, filterStatus]);
-
-  const stats = useMemo(() => {
-    const total = prospects.length;
-    const nouveau = prospects.filter((p) => p.statut === "Nouveau").length;
-    const aContacter = prospects.filter((p) => p.statut === "A contacter" || p.statut === "Contacté").length;
-    const gagne = prospects.filter((p) => p.statut === "Gagné").length;
-
-    return { total, nouveau, aContacter, gagne };
-  }, [prospects]);
+  const maxDemandCount = useMemo(() => {
+    return Math.max(...Object.values(prospectStats.byDemandType), 1);
+  }, [prospectStats.byDemandType]);
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString("fr-BE", {
       day: "numeric",
       month: "short",
-      year: "numeric",
     });
   };
 
-  const formatTime = (dateStr: string) => {
-    return new Date(dateStr).toLocaleTimeString("fr-BE", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const openModal = (prospect: Prospect) => {
-    setSelectedProspect(prospect);
-    setLocalNotes(prospect.notes || "");
-    setNoteDraft("");
-    setModalOpen(true);
-  };
-
-  const closeModal = () => {
-    setModalOpen(false);
-    setSelectedProspect(null);
-  };
-
-  const handleAddNote = async () => {
-    if (!selectedProspect || !noteDraft.trim()) return;
-    const timestamp = new Date().toLocaleString("fr-BE", {
-      day: "2-digit",
-      month: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    const updatedNotes = `${localNotes}${localNotes ? "\n" : ""}[${timestamp}] ${noteDraft.trim()}`;
-    setLocalNotes(updatedNotes);
-    setNoteDraft("");
-
-    // Optimistic update
-    updateProspectInList(selectedProspect.id, { notes: updatedNotes });
-
-    try {
-      await apiFetch(`/api/prospects/${selectedProspect.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ notes: updatedNotes }),
-      });
-      addToast("Note ajoutée", "success");
-    } catch {
-      addToast("Erreur sauvegarde note", "error");
-      await fetchProspects();
+  const getDemandName = (demand: RecentDemand) => {
+    if (demand.first_name || demand.last_name) {
+      return `${demand.first_name || ""} ${demand.last_name || ""}`.trim();
     }
+    return demand.nom || "Sans nom";
   };
 
-  const handleStatusChange = async (newStatus: string) => {
-    if (!selectedProspect) return;
-    setStatusSaving(true);
-
-    // Optimistic update
-    updateProspectInList(selectedProspect.id, { statut: newStatus });
-
-    try {
-      await apiFetch(`/api/prospects/${selectedProspect.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ statut: newStatus }),
-      });
-      addToast("Statut mis à jour", "success");
-    } catch {
-      addToast("Erreur changement statut", "error");
-      await fetchProspects();
-    } finally {
-      setStatusSaving(false);
-    }
+  const getDemandCity = (demand: RecentDemand) => {
+    return demand.city || demand.localite || "";
   };
 
-  const handleConvertToClient = async () => {
-    if (!selectedProspect) return;
-    setConverting(true);
-
-    try {
-      // Create client from prospect data
-      const nameParts = selectedProspect.nom?.trim().split(" ") || [""];
-      const firstName = nameParts[0] || "";
-      const lastName = nameParts.slice(1).join(" ") || "";
-
-      await apiFetch("/api/clients", {
-        method: "POST",
-        body: JSON.stringify({
-          first_name: firstName,
-          last_name: lastName,
-          phone: selectedProspect.telephone,
-          email: selectedProspect.email,
-          address: selectedProspect.adresse,
-          city: selectedProspect.localite,
-          postal_code: selectedProspect.code_postal,
-          notes: `Converti depuis prospect le ${new Date().toLocaleDateString("fr-BE")}\n${selectedProspect.notes || ""}`,
-          crm_stage: "Nouveau",
-        }),
-      });
-
-      // Update prospect status to Gagné
-      await apiFetch(`/api/prospects/${selectedProspect.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ statut: "Gagné" }),
-      });
-
-      updateProspectInList(selectedProspect.id, { statut: "Gagné" });
-      addToast("Prospect converti en client!", "success");
-      closeModal();
-    } catch (err) {
-      console.error("[prospects] convert failed", err);
-      addToast("Erreur lors de la conversion", "error");
-    } finally {
-      setConverting(false);
-    }
+  const getDemandType = (demand: RecentDemand) => {
+    return demand.demand_type || demand.type_demande || "";
   };
 
-  const openGPS = (address: string, app: "waze" | "google") => {
-    const encoded = encodeURIComponent(address);
-    if (app === "waze") {
-      window.open(`https://waze.com/ul?q=${encoded}&navigate=yes`, "_blank");
+  const navigateToCRM = (clientId?: string) => {
+    if (clientId) {
+      router.push(`/dashboard/crm?client=${clientId}`);
     } else {
-      window.open(`https://www.google.com/maps/dir/?api=1&destination=${encoded}`, "_blank");
+      router.push("/dashboard/crm");
     }
   };
-
-  const noteLines = useMemo(() => {
-    if (!localNotes) return [];
-    return localNotes.split("\n").filter((line) => line.trim());
-  }, [localNotes]);
-
-  const fullAddress = selectedProspect
-    ? [selectedProspect.adresse, selectedProspect.code_postal, selectedProspect.localite].filter(Boolean).join(", ")
-    : "";
 
   return (
     <PageContainer>
@@ -280,57 +175,21 @@ export default function ProspectsPage() {
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-airDark flex items-center gap-2">
-              <User className="w-6 h-6" />
-              Prospects
+              <BarChart3 className="w-6 h-6" />
+              Demandes & Prospects
             </h1>
             <p className="text-sm text-airMuted mt-1">
-              {stats.total} prospects • {stats.nouveau} nouveaux • {stats.aContacter} à traiter
+              Vue d'ensemble des demandes entrantes
             </p>
           </div>
-          <Button variant="ghost" icon={<RefreshCw className="w-4 h-4" />} onClick={fetchProspects}>
-            Actualiser
-          </Button>
+          <button
+            onClick={() => router.push("/dashboard/crm")}
+            className="flex items-center gap-2 text-sm text-airPrimary hover:underline"
+          >
+            <ExternalLink className="w-4 h-4" />
+            Voir le CRM complet
+          </button>
         </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Card
-            className={`cursor-pointer transition ${filterStatus === "all" ? "ring-2 ring-airPrimary" : ""}`}
-            onClick={() => setFilterStatus("all")}
-          >
-            <p className="text-xs text-airMuted uppercase">Total</p>
-            <p className="text-2xl font-bold text-airDark">{stats.total}</p>
-          </Card>
-          <Card
-            className={`cursor-pointer transition bg-blue-50 ${filterStatus === "Nouveau" ? "ring-2 ring-blue-500" : ""}`}
-            onClick={() => setFilterStatus("Nouveau")}
-          >
-            <p className="text-xs text-blue-600 uppercase">Nouveaux</p>
-            <p className="text-2xl font-bold text-blue-700">{stats.nouveau}</p>
-          </Card>
-          <Card
-            className={`cursor-pointer transition bg-amber-50 ${filterStatus === "A contacter" ? "ring-2 ring-amber-500" : ""}`}
-            onClick={() => setFilterStatus("A contacter")}
-          >
-            <p className="text-xs text-amber-600 uppercase">À traiter</p>
-            <p className="text-2xl font-bold text-amber-700">{stats.aContacter}</p>
-          </Card>
-          <Card
-            className={`cursor-pointer transition bg-green-50 ${filterStatus === "Gagné" ? "ring-2 ring-green-500" : ""}`}
-            onClick={() => setFilterStatus("Gagné")}
-          >
-            <p className="text-xs text-green-600 uppercase">Gagnés</p>
-            <p className="text-2xl font-bold text-green-700">{stats.gagne}</p>
-          </Card>
-        </div>
-
-        {/* Search */}
-        <Input
-          icon={<Search className="w-4 h-4 text-airMuted" />}
-          placeholder="Chercher par nom, email, téléphone, ville..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
 
         {/* Loading */}
         {loading && (
@@ -339,256 +198,155 @@ export default function ProspectsPage() {
           </div>
         )}
 
-        {/* Prospects List */}
         {!loading && (
-          <div className="space-y-3">
-            {filteredProspects.length === 0 ? (
-              <div className="text-center py-12 text-airMuted">
-                <User className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>Aucun prospect trouvé</p>
-              </div>
-            ) : (
-              filteredProspects.map((prospect) => (
-                <Card
-                  key={prospect.id}
-                  className="hover:shadow-md transition-shadow cursor-pointer"
-                  onClick={() => openModal(prospect)}
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    {/* Left: Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="font-bold text-airDark text-lg">{prospect.nom}</span>
-                        {prospect.statut && (
-                          <Badge size="sm" className={STATUS_COLORS[prospect.statut] || "bg-gray-100 text-gray-700"}>
-                            {prospect.statut}
-                          </Badge>
-                        )}
-                        {prospect.plan_image_url && (
-                          <Badge size="sm" variant="accent">
-                            📐 Plan
-                          </Badge>
-                        )}
-                      </div>
-
-                      <div className="grid sm:grid-cols-2 gap-2 text-sm">
-                        {prospect.email && (
-                          <span className="flex items-center gap-1.5 text-airMuted">
-                            <Mail className="w-3.5 h-3.5" />
-                            {prospect.email}
-                          </span>
-                        )}
-                        {prospect.telephone && (
-                          <span className="flex items-center gap-1.5 text-airMuted">
-                            <Phone className="w-3.5 h-3.5" />
-                            {prospect.telephone}
-                          </span>
-                        )}
-                        {prospect.localite && (
-                          <span className="flex items-center gap-1.5 text-airMuted">
-                            <MapPin className="w-3.5 h-3.5" />
-                            {prospect.localite}
-                          </span>
-                        )}
-                        <span className="flex items-center gap-1.5 text-airMuted">
-                          <Calendar className="w-3.5 h-3.5" />
-                          {formatDate(prospect.created_at)}
-                        </span>
-                      </div>
-
-                      {prospect.type_demande && (
-                        <p className="text-sm text-airDark font-medium mt-2">{prospect.type_demande}</p>
-                      )}
-                    </div>
-
-                    {/* Right: Arrow */}
-                    <ArrowRight className="w-5 h-5 text-airMuted" />
+          <>
+            {/* KPI Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Card className="bg-gradient-to-br from-blue-50 to-blue-100/50 border-blue-200">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-xs text-blue-600 uppercase font-medium">Total demandes</p>
+                    <p className="text-3xl font-bold text-blue-700 mt-1">{prospectStats.total}</p>
+                    <p className="text-xs text-blue-500 mt-1">
+                      {prospectStats.thisMonth} ce mois
+                    </p>
                   </div>
-                </Card>
-              ))
-            )}
-          </div>
+                  <div className="p-2 bg-blue-200/50 rounded-lg">
+                    <Users className="w-5 h-5 text-blue-600" />
+                  </div>
+                </div>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-green-50 to-green-100/50 border-green-200">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-xs text-green-600 uppercase font-medium">Convertis</p>
+                    <p className="text-3xl font-bold text-green-700 mt-1">{clientStats.converted}</p>
+                    <p className="text-xs text-green-500 mt-1">
+                      prospects → clients
+                    </p>
+                  </div>
+                  <div className="p-2 bg-green-200/50 rounded-lg">
+                    <CheckCircle2 className="w-5 h-5 text-green-600" />
+                  </div>
+                </div>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-purple-50 to-purple-100/50 border-purple-200">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-xs text-purple-600 uppercase font-medium">Taux conversion</p>
+                    <p className="text-3xl font-bold text-purple-700 mt-1">{conversionRate}%</p>
+                    <p className="text-xs text-purple-500 mt-1">
+                      objectif: 50%
+                    </p>
+                  </div>
+                  <div className="p-2 bg-purple-200/50 rounded-lg">
+                    <TrendingUp className="w-5 h-5 text-purple-600" />
+                  </div>
+                </div>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-amber-50 to-amber-100/50 border-amber-200">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-xs text-amber-600 uppercase font-medium">Cette semaine</p>
+                    <p className="text-3xl font-bold text-amber-700 mt-1">{prospectStats.thisWeek}</p>
+                    <p className="text-xs text-amber-500 mt-1">
+                      nouvelles demandes
+                    </p>
+                  </div>
+                  <div className="p-2 bg-amber-200/50 rounded-lg">
+                    <Calendar className="w-5 h-5 text-amber-600" />
+                  </div>
+                </div>
+              </Card>
+            </div>
+
+            {/* Two columns: Demand types + Recent demands */}
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Demand Types Breakdown */}
+              <Card>
+                <h3 className="font-semibold text-airDark mb-4 flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4" />
+                  Par type de demande
+                </h3>
+                {sortedDemandTypes.length === 0 ? (
+                  <p className="text-sm text-airMuted">Aucune donnée</p>
+                ) : (
+                  <div className="space-y-3">
+                    {sortedDemandTypes.map(([type, count]) => (
+                      <div key={type}>
+                        <div className="flex items-center justify-between text-sm mb-1">
+                          <span className="text-airDark font-medium">{type}</span>
+                          <span className="text-airMuted">{count}</span>
+                        </div>
+                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-airPrimary to-airAccent rounded-full transition-all"
+                            style={{ width: `${(count / maxDemandCount) * 100}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Card>
+
+              {/* Recent Demands */}
+              <Card>
+                <h3 className="font-semibold text-airDark mb-4 flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  Dernières demandes
+                </h3>
+                {recentDemands.length === 0 ? (
+                  <p className="text-sm text-airMuted">Aucune demande récente</p>
+                ) : (
+                  <div className="space-y-2">
+                    {recentDemands.map((demand) => (
+                      <div
+                        key={demand.id}
+                        onClick={() => navigateToCRM(demand.client_id)}
+                        className="flex items-center justify-between p-3 rounded-lg bg-airSurface/50 hover:bg-airSurface cursor-pointer transition group"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-airDark text-sm truncate">
+                              {getDemandName(demand)}
+                            </span>
+                            {getDemandType(demand) && (
+                              <Badge size="sm" variant="default" className="shrink-0">
+                                {getDemandType(demand)}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3 mt-1 text-xs text-airMuted">
+                            {getDemandCity(demand) && (
+                              <span className="flex items-center gap-1">
+                                <MapPin className="w-3 h-3" />
+                                {getDemandCity(demand)}
+                              </span>
+                            )}
+                            <span>{formatDate(demand.created_at)}</span>
+                          </div>
+                        </div>
+                        <ArrowRight className="w-4 h-4 text-airMuted group-hover:text-airPrimary transition" />
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <button
+                  onClick={() => navigateToCRM()}
+                  className="w-full mt-4 py-2 text-sm text-airPrimary hover:bg-airPrimary/5 rounded-lg transition flex items-center justify-center gap-2"
+                >
+                  Voir tous dans le CRM
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </Card>
+            </div>
+          </>
         )}
       </div>
-
-      {/* Prospect Detail Modal */}
-      <Modal isOpen={modalOpen} onClose={closeModal} title={selectedProspect?.nom || "Prospect"} size="2xl">
-        {selectedProspect && (
-          <div className="space-y-6">
-            {/* Status selector */}
-            <div className="flex items-center gap-3">
-              <Select
-                label="Statut"
-                value={selectedProspect.statut || "Nouveau"}
-                onChange={(e) => handleStatusChange(e.target.value)}
-                options={STATUS_OPTIONS}
-                disabled={statusSaving}
-              />
-              {selectedProspect.statut !== "Gagné" && (
-                <Button
-                  variant="primary"
-                  icon={<CheckCircle className="w-4 h-4" />}
-                  onClick={handleConvertToClient}
-                  loading={converting}
-                  className="mt-6"
-                >
-                  Convertir en client
-                </Button>
-              )}
-            </div>
-
-            {/* Contact Info */}
-            <div className="bg-airSurface/50 rounded-xl p-4 space-y-3">
-              <p className="text-sm font-semibold text-airDark flex items-center gap-2">
-                <User className="w-4 h-4" /> Contact
-              </p>
-              <div className="grid sm:grid-cols-2 gap-3">
-                {selectedProspect.email && (
-                  <a
-                    href={`mailto:${selectedProspect.email}`}
-                    className="flex items-center gap-2 p-3 bg-white rounded-lg border border-airBorder hover:border-airPrimary transition"
-                  >
-                    <Mail className="w-4 h-4 text-airPrimary" />
-                    <span className="text-sm">{selectedProspect.email}</span>
-                  </a>
-                )}
-                {selectedProspect.telephone && (
-                  <a
-                    href={`tel:${selectedProspect.telephone}`}
-                    className="flex items-center gap-2 p-3 bg-white rounded-lg border border-airBorder hover:border-airPrimary transition"
-                  >
-                    <Phone className="w-4 h-4 text-airPrimary" />
-                    <span className="text-sm">{selectedProspect.telephone}</span>
-                  </a>
-                )}
-              </div>
-            </div>
-
-            {/* Address & GPS */}
-            {fullAddress && (
-              <div className="bg-airSurface/50 rounded-xl p-4 space-y-3">
-                <p className="text-sm font-semibold text-airDark flex items-center gap-2">
-                  <MapPin className="w-4 h-4" /> Adresse
-                </p>
-                <p className="text-sm text-airMuted">{fullAddress}</p>
-                <div className="flex gap-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    icon={<Navigation className="w-4 h-4" />}
-                    onClick={() => openGPS(fullAddress, "waze")}
-                  >
-                    Waze
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    icon={<Navigation className="w-4 h-4" />}
-                    onClick={() => openGPS(fullAddress, "google")}
-                  >
-                    Google Maps
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Request info */}
-            <div className="bg-airSurface/50 rounded-xl p-4 space-y-3">
-              <p className="text-sm font-semibold text-airDark flex items-center gap-2">
-                <FileText className="w-4 h-4" /> Demande
-              </p>
-              <div className="grid sm:grid-cols-2 gap-3 text-sm">
-                {selectedProspect.type_demande && (
-                  <div>
-                    <span className="text-airMuted">Type:</span>{" "}
-                    <span className="font-medium">{selectedProspect.type_demande}</span>
-                  </div>
-                )}
-                {selectedProspect.type_client && (
-                  <div>
-                    <span className="text-airMuted">Client:</span>{" "}
-                    <span className="font-medium">{selectedProspect.type_client}</span>
-                  </div>
-                )}
-                {selectedProspect.source && (
-                  <div>
-                    <span className="text-airMuted">Source:</span>{" "}
-                    <span className="font-medium">{selectedProspect.source}</span>
-                  </div>
-                )}
-                <div>
-                  <span className="text-airMuted">Reçu le:</span>{" "}
-                  <span className="font-medium">
-                    {formatDate(selectedProspect.created_at)} à {formatTime(selectedProspect.created_at)}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Plan image */}
-            {selectedProspect.plan_image_url && (
-              <div className="bg-airSurface/50 rounded-xl p-4 space-y-3">
-                <p className="text-sm font-semibold text-airDark flex items-center gap-2">
-                  <Image className="w-4 h-4" /> Plan joint
-                </p>
-                <a
-                  href={selectedProspect.plan_image_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-airPrimary hover:underline text-sm"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  Voir le plan
-                </a>
-              </div>
-            )}
-
-            {/* Notes */}
-            <div className="bg-airSurface/50 rounded-xl p-4 space-y-3">
-              <p className="text-sm font-semibold text-airDark flex items-center gap-2">
-                <MessageSquare className="w-4 h-4" /> Notes
-              </p>
-              <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                {noteLines.length === 0 && <p className="text-sm text-airMuted">Aucune note</p>}
-                {noteLines.map((note, index) => (
-                  <div
-                    key={index}
-                    className="rounded-lg border border-airBorder/60 bg-white px-3 py-2 text-sm text-airDark"
-                  >
-                    {note}
-                  </div>
-                ))}
-              </div>
-              <div className="flex gap-2">
-                <input
-                  value={noteDraft}
-                  onChange={(e) => setNoteDraft(e.target.value)}
-                  placeholder="Ajouter une note..."
-                  className="flex-1 rounded-xl border border-airBorder px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-airPrimary"
-                  onKeyDown={(e) => e.key === "Enter" && handleAddNote()}
-                />
-                <Button variant="primary" size="sm" onClick={handleAddNote} disabled={!noteDraft.trim()}>
-                  Ajouter
-                </Button>
-              </div>
-            </div>
-
-            {/* Quick actions */}
-            <div className="flex gap-2 pt-2 border-t border-airBorder">
-              {selectedProspect.statut !== "Perdu" && selectedProspect.statut !== "Gagné" && (
-                <Button
-                  variant="danger"
-                  size="sm"
-                  icon={<XCircle className="w-4 h-4" />}
-                  onClick={() => handleStatusChange("Perdu")}
-                >
-                  Marquer perdu
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
-      </Modal>
     </PageContainer>
   );
 }
