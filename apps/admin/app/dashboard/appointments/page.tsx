@@ -24,6 +24,7 @@ import {
 import { Badge, Button, Card, Input, Modal, Select, useToast } from '@/components/ui';
 import { PageContainer } from '@/components/layout';
 import { apiFetch } from '@/lib/apiClient';
+import { useUserRole } from '@/lib/useUserRole';
 import { STATUS_LABELS, STATUS_COLORS } from '@/lib/constants';
 
 type Appointment = {
@@ -136,6 +137,8 @@ export default function AppointmentsPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [saving, setSaving] = useState(false);
   const toast = useToast();
+  const { role } = useUserRole();
+  const canCreate = role === 'admin' || role === 'super_admin';
 
   const [newForm, setNewForm] = useState({
     client_id: '',
@@ -491,9 +494,11 @@ export default function AppointmentsPage() {
                 ))}
               </select>
               <div className="flex-1" />
-              <Button variant="primary" size="sm" icon={<Plus className="w-4 h-4" />} onClick={openNewModal}>
-                <span className="hidden sm:inline">Nouveau</span>
-              </Button>
+              {canCreate && (
+                <Button variant="primary" size="sm" icon={<Plus className="w-4 h-4" />} onClick={openNewModal}>
+                  <span className="hidden sm:inline">Nouveau</span>
+                </Button>
+              )}
             </div>
           </div>
 
