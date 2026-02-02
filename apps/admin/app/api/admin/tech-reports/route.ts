@@ -9,12 +9,9 @@ export async function GET(request: NextRequest) {
   const requestId = crypto.randomUUID();
 
   const auth = await requireAdmin();
-  if ("error" in auth && auth.error) return auth.error;
+  if ("error" in auth) return auth.error;
 
-  // Only super_admin and admin can view all reports
-  if (auth.role !== "super_admin" && auth.role !== "admin") {
-    return jsonError("FORBIDDEN", "Accès réservé aux administrateurs", requestId, 403);
-  }
+  // requireAdmin already ensures user is admin or super_admin
 
   try {
     const supabase = getSupabaseAdmin();
@@ -103,11 +100,9 @@ export async function PATCH(request: NextRequest) {
   const requestId = crypto.randomUUID();
 
   const auth = await requireAdmin();
-  if ("error" in auth && auth.error) return auth.error;
+  if ("error" in auth) return auth.error;
 
-  if (auth.role !== "super_admin" && auth.role !== "admin") {
-    return jsonError("FORBIDDEN", "Accès réservé aux administrateurs", requestId, 403);
-  }
+  // requireAdmin already ensures user is admin or super_admin
 
   try {
     const body = await request.json();
