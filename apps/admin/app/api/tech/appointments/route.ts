@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
       .select(
         `
         *,
-        clients(id, first_name, last_name, email, phone, city, address)
+        clients(id, first_name, last_name, email, phone, city, address_line1)
       `,
         { count: "exact" }
       )
@@ -50,16 +50,25 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform for frontend
-    const transformed = (appointments || []).map((appt) => ({
-      ...appt,
-      date: appt.scheduled_at ? appt.scheduled_at.split("T")[0] : null,
-      slot: appt.scheduled_at
-        ? new Date(appt.scheduled_at).toLocaleTimeString("fr-FR", {
-            hour: "2-digit",
-            minute: "2-digit",
-          })
-        : null,
-    }));
+    const transformed = (appointments || []).map((appt) => {
+      const client = appt.clients as { id?: string; first_name?: string; last_name?: string; email?: string; phone?: string; city?: string; address_line1?: string } | null;
+      return {
+        ...appt,
+        date: appt.scheduled_at ? appt.scheduled_at.split("T")[0] : null,
+        slot: appt.scheduled_at
+          ? new Date(appt.scheduled_at).toLocaleTimeString("fr-FR", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })
+          : null,
+        // Flatten client data for frontend
+        client_full_name: client ? [client.first_name, client.last_name].filter(Boolean).join(" ") : null,
+        client_phone: client?.phone || null,
+        client_email: client?.email || null,
+        client_address: client?.address_line1 || null,
+        client_city: client?.city || null,
+      };
+    });
 
     return jsonOk({
       appointments: transformed,

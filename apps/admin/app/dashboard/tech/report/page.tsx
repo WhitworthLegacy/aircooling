@@ -39,7 +39,7 @@ const STEPS = [
   { id: 1, name: "Client", description: "Rechercher le client" },
   { id: 2, name: "Plan", description: "Dessiner le plan" },
   { id: 3, name: "Heures", description: "Estimer les heures" },
-  { id: 4, name: "Pieces", description: "Selectionner les pieces" },
+  { id: 4, name: "Pièces", description: "Sélectionner les pièces" },
   { id: 5, name: "Signature", description: "Faire signer le client" },
 ];
 
@@ -158,7 +158,7 @@ export default function TechReportPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setSearchError(data.error?.message || "Client non trouve");
+        setSearchError(data.error?.message || "Client non trouvé");
         return;
       }
 
@@ -267,7 +267,7 @@ export default function TechReportPage() {
   // Submit report
   const handleSubmit = async () => {
     if (!client || !planImage || !estimatedHours || !signatureImage) {
-      setError("Veuillez completer toutes les etapes");
+      setError("Veuillez compléter toutes les étapes");
       return;
     }
 
@@ -356,7 +356,7 @@ export default function TechReportPage() {
 
             <div className="space-y-4">
               <Input
-                label="Prenom"
+                label="Prénom"
                 value={searchFirstName}
                 onChange={(e) => setSearchFirstName(e.target.value)}
                 placeholder="Ex: Jean"
@@ -368,7 +368,7 @@ export default function TechReportPage() {
                 placeholder="Ex: Dupont"
               />
               <Input
-                label="Telephone"
+                label="Téléphone"
                 value={searchPhone}
                 onChange={(e) => setSearchPhone(e.target.value)}
                 placeholder="Ex: 0612345678"
@@ -438,7 +438,7 @@ export default function TechReportPage() {
 
             <div className="flex justify-between items-center">
               <p className="text-sm text-gray-500">
-                {planImage ? "Plan dessine" : "Dessinez dans le cadre"}
+                {planImage ? "Plan dessiné" : "Dessinez dans le cadre"}
               </p>
               <Button variant="ghost" onClick={clearCanvas}>
                 Effacer
@@ -453,14 +453,14 @@ export default function TechReportPage() {
             <div className="text-center">
               <h2 className="text-xl font-bold text-gray-900">Estimation des heures</h2>
               <p className="text-gray-500 mt-1">
-                Estimez le nombre d'heures necessaires pour l'intervention
+                Estimez le nombre d'heures nécessaires pour l'intervention
               </p>
             </div>
 
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Heures estimees
+                  Heures estimées
                 </label>
                 <input
                   type="number"
@@ -496,16 +496,16 @@ export default function TechReportPage() {
         return (
           <div className="space-y-4">
             <div className="text-center">
-              <h2 className="text-xl font-bold text-gray-900">Selection des pieces</h2>
+              <h2 className="text-xl font-bold text-gray-900">Sélection des pièces</h2>
               <p className="text-gray-500 mt-1">
-                Selectionnez les pieces necessaires (optionnel)
+                Sélectionnez les pièces nécessaires (optionnel)
               </p>
             </div>
 
             <Input
               value={partSearch}
               onChange={(e) => setPartSearch(e.target.value)}
-              placeholder="Rechercher une piece..."
+              placeholder="Rechercher une pièce..."
               icon={<Search className="w-4 h-4" />}
             />
 
@@ -568,7 +568,7 @@ export default function TechReportPage() {
 
                 {filteredInventory.length === 0 && (
                   <p className="text-center text-gray-500 py-8">
-                    Aucune piece trouvee
+                    Aucune pièce trouvée
                   </p>
                 )}
               </div>
@@ -577,7 +577,7 @@ export default function TechReportPage() {
             {selectedParts.length > 0 && (
               <div className="bg-gray-50 rounded-xl p-4">
                 <p className="text-sm font-medium text-gray-700">
-                  {selectedParts.length} piece(s) selectionnee(s)
+                  {selectedParts.length} pièce(s) sélectionnée(s)
                 </p>
               </div>
             )}
@@ -596,7 +596,7 @@ export default function TechReportPage() {
 
             {/* Summary */}
             <Card className="p-4">
-              <h3 className="font-semibold text-gray-900 mb-3">Recapitulatif</h3>
+              <h3 className="font-semibold text-gray-900 mb-3">Récapitulatif</h3>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Client:</span>
@@ -605,13 +605,13 @@ export default function TechReportPage() {
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Heures estimees:</span>
+                  <span className="text-gray-600">Heures estimées:</span>
                   <span className="font-medium">{estimatedHours}h</span>
                 </div>
                 {selectedParts.length > 0 && (
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Pieces:</span>
-                    <span className="font-medium">{selectedParts.length} piece(s)</span>
+                    <span className="text-gray-600">Pièces:</span>
+                    <span className="font-medium">{selectedParts.length} pièce(s)</span>
                   </div>
                 )}
               </div>
@@ -628,7 +628,7 @@ export default function TechReportPage() {
             {success && (
               <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl text-sm flex items-center gap-2">
                 <Check className="w-5 h-5" />
-                Rapport envoye avec succes ! Redirection...
+                Rapport envoyé avec succès ! Redirection...
               </div>
             )}
           </div>
@@ -646,7 +646,7 @@ export default function TechReportPage() {
         <div className="max-w-lg mx-auto">
           <h1 className="text-lg font-bold text-gray-900">Nouveau Rapport</h1>
           <p className="text-sm text-gray-500">
-            Etape {currentStep} sur {STEPS.length}
+            Étape {currentStep} sur {STEPS.length}
           </p>
         </div>
       </div>
@@ -715,7 +715,7 @@ export default function TechReportPage() {
               icon={<Check className="w-4 h-4" />}
               className="flex-1"
             >
-              {success ? "Envoye !" : "Envoyer le rapport"}
+              {success ? "Envoyé !" : "Envoyer le rapport"}
             </Button>
           )}
         </div>

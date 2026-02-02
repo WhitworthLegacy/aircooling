@@ -18,6 +18,7 @@ import {
   FileEdit,
   Settings,
   PenLine,
+  ClipboardList,
   type LucideIcon,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -43,7 +44,8 @@ const defaultNavigation: NavItem[] = [
   { name: 'CRM', href: '/dashboard/crm', icon: Kanban, roles: ['admin', 'super_admin'] },
   { name: 'Clients', href: '/dashboard/clients', icon: Users, roles: ['admin', 'super_admin'] },
   { name: 'Rendez-vous', href: '/dashboard/bookings', icon: Calendar },
-  { name: 'Rapport', href: '/dashboard/tech/report', icon: PenLine },
+  { name: 'Rapport', href: '/dashboard/tech/report', icon: PenLine, roles: ['technicien'] },
+  { name: 'Rapports', href: '/dashboard/reports', icon: ClipboardList, roles: ['admin', 'super_admin'] },
   { name: 'Devis', href: '/dashboard/quotes', icon: FileText, roles: ['admin', 'super_admin'] },
   { name: 'Messages', href: '/dashboard/conversations', icon: MessageSquare, roles: ['admin', 'super_admin'] },
   { name: 'Produits', href: '/dashboard/products', icon: ShoppingBag, roles: ['admin', 'super_admin'] },

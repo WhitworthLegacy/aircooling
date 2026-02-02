@@ -50,16 +50,23 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform appointments to include slot/date for frontend compatibility
-    const transformedAppointments = (appointments || []).map((appt) => ({
-      ...appt,
-      date: appt.scheduled_at ? appt.scheduled_at.split("T")[0] : null,
-      slot: appt.scheduled_at
-        ? new Date(appt.scheduled_at).toLocaleTimeString("fr-FR", {
-            hour: "2-digit",
-            minute: "2-digit",
-          })
-        : null,
-    }));
+    const transformedAppointments = (appointments || []).map((appt) => {
+      const client = appt.clients as { first_name?: string; last_name?: string; email?: string; phone?: string } | null;
+      return {
+        ...appt,
+        date: appt.scheduled_at ? appt.scheduled_at.split("T")[0] : null,
+        slot: appt.scheduled_at
+          ? new Date(appt.scheduled_at).toLocaleTimeString("fr-FR", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })
+          : null,
+        // Flatten client data for frontend
+        client_full_name: client ? [client.first_name, client.last_name].filter(Boolean).join(" ") : null,
+        client_phone: client?.phone || null,
+        client_email: client?.email || null,
+      };
+    });
 
     return jsonOk({ data: transformedAppointments, appointments: transformedAppointments, total: count || 0 });
   } catch (error) {
