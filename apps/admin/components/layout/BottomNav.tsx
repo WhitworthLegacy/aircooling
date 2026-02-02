@@ -15,6 +15,7 @@ import {
   Settings,
   UserCog,
   PenLine,
+  ClipboardList,
   type LucideIcon,
 } from 'lucide-react';
 import { useUserRole } from '@/lib/useUserRole';
@@ -30,7 +31,8 @@ export type NavItem = {
 const navItems: NavItem[] = [
   { label: 'Home', href: '/dashboard', icon: LayoutDashboard },
   { label: 'RDV', href: '/dashboard/appointments', icon: Calendar },
-  { label: 'Rapport', href: '/dashboard/tech/report', icon: PenLine },
+  { label: 'Rapport', href: '/dashboard/tech/report', icon: PenLine, roles: ['technicien'] },
+  { label: 'Rapports', href: '/dashboard/reports', icon: ClipboardList, roles: ['admin', 'super_admin'] },
   { label: 'CRM', href: '/dashboard/crm', icon: Kanban, roles: ['admin', 'super_admin'] },
   { label: 'Prospects', href: '/dashboard/prospects', icon: UserPlus, roles: ['admin', 'super_admin'] },
   { label: 'Devis', href: '/dashboard/devis', icon: FileText, roles: ['admin', 'super_admin'] },
