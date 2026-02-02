@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     // This approach is more reliable for matching 2/3 fields
     const { data: potentialMatches, error } = await supabase
       .from("clients")
-      .select("id, first_name, last_name, phone, email, city, address, plan_image_url")
+      .select("id, first_name, last_name, phone, email, city, address_line1, plan_image_url")
       .limit(500);
 
     if (error) {

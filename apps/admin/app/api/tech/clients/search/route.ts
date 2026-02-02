@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     // Fetch all clients and filter in code
     const { data: potentialMatches, error } = await supabase
       .from("clients")
-      .select("id, first_name, last_name, phone, email, city, address, plan_image_url")
+      .select("id, first_name, last_name, phone, email, city, address_line1, plan_image_url")
       .limit(500);
 
     if (error) {
