@@ -50,7 +50,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       "system_type", "notes", "crm_stage",
       "language", "phone_e164", "whatsapp_optin",
       "preferred_channel", "checklists", "workflow_state",
-      "selected_parts",
+      "selected_parts", "is_prospect",
     ];
 
     // Field mapping (frontend -> database)

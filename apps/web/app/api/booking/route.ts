@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { getSupabaseServerClient, getSupabaseAdmin } from "@/lib/supabaseServer";
 import { jsonError, jsonOk } from "@/lib/apiResponse";
 import { getBaseUrl } from "@/lib/resend";
 
@@ -59,8 +59,10 @@ export async function POST(request: NextRequest) {
     let clientId: string;
 
     // If client_id provided from verified flow, use it directly
+    // Use admin client to bypass RLS (same as client-verify endpoint)
     if (verifiedClientId) {
-      const { data: verifiedClient } = await supabase
+      const supabaseAdmin = getSupabaseAdmin();
+      const { data: verifiedClient } = await supabaseAdmin
         .from("clients")
         .select("id")
         .eq("id", verifiedClientId)

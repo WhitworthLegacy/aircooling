@@ -567,11 +567,11 @@ export default function RendezVousPage() {
                 </div>
               </div>
 
-              {/* Optional fields */}
+              {/* Required and optional fields */}
               <div className="space-y-4 mb-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Adresse d&apos;intervention (optionnel)
+                    Adresse d&apos;intervention <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -610,7 +610,7 @@ export default function RendezVousPage() {
                 </button>
                 <button
                   onClick={handleSubmit}
-                  disabled={submitting}
+                  disabled={submitting || !address.trim()}
                   className="inline-flex items-center gap-2 bg-[#CC0A0A] hover:bg-[#b00909] text-white font-semibold px-6 py-3 rounded-xl transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                 >
                   {submitting ? (
