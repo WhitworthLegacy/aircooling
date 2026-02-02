@@ -31,10 +31,20 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Helper to get role from profiles table
+  const getRole = async (userId: string) => {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", userId)
+      .single();
+    return profile?.role || null;
+  };
+
   // Allow login page without auth
   if (pathname === "/login") {
     if (user) {
-      const role = user.user_metadata?.role;
+      const role = await getRole(user.id);
       if (role === "technicien" || role === "admin" || role === "super_admin") {
         return NextResponse.redirect(new URL("/dashboard", request.url));
       }
@@ -48,7 +58,7 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
 
-    const role = user.user_metadata?.role;
+    const role = await getRole(user.id);
     if (
       role !== "technicien" &&
       role !== "admin" &&

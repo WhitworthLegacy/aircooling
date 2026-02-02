@@ -17,6 +17,7 @@ import {
   ShoppingBag,
   FileEdit,
   Settings,
+  PenLine,
   type LucideIcon,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -39,16 +40,17 @@ interface SidebarProps {
 // Default navigation items
 const defaultNavigation: NavItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'CRM', href: '/dashboard/crm', icon: Kanban },
-  { name: 'Clients', href: '/dashboard/clients', icon: Users },
+  { name: 'CRM', href: '/dashboard/crm', icon: Kanban, roles: ['admin', 'super_admin'] },
+  { name: 'Clients', href: '/dashboard/clients', icon: Users, roles: ['admin', 'super_admin'] },
   { name: 'Rendez-vous', href: '/dashboard/bookings', icon: Calendar },
-  { name: 'Devis', href: '/dashboard/quotes', icon: FileText },
-  { name: 'Messages', href: '/dashboard/conversations', icon: MessageSquare },
-  { name: 'Produits', href: '/dashboard/products', icon: ShoppingBag },
-  { name: 'Commandes', href: '/dashboard/orders', icon: Package },
-  { name: 'Blog', href: '/dashboard/blog', icon: FileEdit },
-  { name: 'Finances', href: '/dashboard/finances', icon: DollarSign },
-  { name: 'Parametres', href: '/dashboard/settings', icon: Settings },
+  { name: 'Rapport', href: '/dashboard/tech/report', icon: PenLine },
+  { name: 'Devis', href: '/dashboard/quotes', icon: FileText, roles: ['admin', 'super_admin'] },
+  { name: 'Messages', href: '/dashboard/conversations', icon: MessageSquare, roles: ['admin', 'super_admin'] },
+  { name: 'Produits', href: '/dashboard/products', icon: ShoppingBag, roles: ['admin', 'super_admin'] },
+  { name: 'Commandes', href: '/dashboard/orders', icon: Package, roles: ['admin', 'super_admin'] },
+  { name: 'Blog', href: '/dashboard/blog', icon: FileEdit, roles: ['admin', 'super_admin'] },
+  { name: 'Finances', href: '/dashboard/finances', icon: DollarSign, roles: ['super_admin'] },
+  { name: 'Parametres', href: '/dashboard/settings', icon: Settings, roles: ['super_admin'] },
 ];
 
 export default function Sidebar({

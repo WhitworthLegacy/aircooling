@@ -1,7 +1,7 @@
 import { getSupabaseServerClient, getSupabaseAdmin } from "@/lib/supabaseServer";
 import { jsonUnauthorized, jsonForbidden } from "@/lib/apiResponse";
 
-export async function requireAdmin() {
+export async function requireTech() {
   const supabase = await getSupabaseServerClient();
   const {
     data: { user },
@@ -21,8 +21,8 @@ export async function requireAdmin() {
     .single();
 
   const role = profile?.role;
-  if (role !== "admin" && role !== "super_admin") {
-    return { error: jsonForbidden("Accès réservé aux administrateurs") };
+  if (role !== "technicien" && role !== "admin" && role !== "super_admin") {
+    return { error: jsonForbidden("Accès réservé aux techniciens") };
   }
 
   return { user, role };

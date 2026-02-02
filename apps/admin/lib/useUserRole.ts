@@ -10,6 +10,7 @@ export type RolePermissions = {
   loading: boolean;
   canAccessDashboard: boolean;
   canAccessAppointments: boolean;
+  canAccessPlan: boolean;
   canAccessClients: boolean;
   canAccessDevis: boolean;
   canAccessCRM: boolean;
@@ -33,8 +34,20 @@ export function useUserRole(): RolePermissions {
         const {
           data: { user },
         } = await supabase.auth.getUser();
-        const userRole = (user?.user_metadata?.role as UserRole) || null;
-        setRole(userRole);
+
+        if (!user) {
+          setRole(null);
+          return;
+        }
+
+        // Fetch role from profiles table
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .single();
+
+        setRole((profile?.role as UserRole) || null);
       } catch {
         setRole(null);
       } finally {
@@ -50,9 +63,10 @@ export function useUserRole(): RolePermissions {
   return {
     role,
     loading,
-    // Technicien: dashboard + appointments only
+    // Technicien: dashboard + appointments + plan
     canAccessDashboard: role !== null,
     canAccessAppointments: role !== null,
+    canAccessPlan: role !== null,
     // Admin+: everything except finances/settings/users
     canAccessClients: isAdmin,
     canAccessDevis: isAdmin,
