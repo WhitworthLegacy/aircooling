@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import {
   FileText,
   Search,
@@ -20,6 +21,8 @@ import {
   MoreVertical,
   RefreshCw,
   MessageSquare,
+  Edit3,
+  AlertCircle,
 } from "lucide-react";
 import { PageContainer } from "@/components/layout";
 import { Badge, Button, Card, Input, Modal, Select, useToast } from "@/components/ui";
@@ -42,8 +45,11 @@ type Quote = {
   subtotal?: number;
   labor_total?: number;
   parts_total?: number;
+  labor_hours?: number;
   tax_rate?: number;
   tax_amount?: number;
+  notes?: string;
+  internal_notes?: string;
   created_at: string;
   sent_at?: string;
   accepted_at?: string;
@@ -68,10 +74,11 @@ type Quote = {
   }>;
 };
 
-type FilterStatus = "all" | "draft" | "sent" | "accepted" | "refused";
+type FilterStatus = "all" | "draft" | "pending_validation" | "sent" | "accepted" | "refused";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
   draft: { label: "Brouillon", color: "bg-gray-100 text-gray-700", icon: <FileText className="w-4 h-4" /> },
+  pending_validation: { label: "À valider", color: "bg-amber-100 text-amber-700", icon: <AlertCircle className="w-4 h-4" /> },
   sent: { label: "Envoyé", color: "bg-blue-100 text-blue-700", icon: <Send className="w-4 h-4" /> },
   accepted: { label: "Accepté", color: "bg-green-100 text-green-700", icon: <CheckCircle className="w-4 h-4" /> },
   refused: { label: "Refusé", color: "bg-red-100 text-red-700", icon: <XCircle className="w-4 h-4" /> },
@@ -80,6 +87,8 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.
 
 export default function DevisPage() {
   const toast = useToast();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -88,6 +97,23 @@ export default function DevisPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // PDF Preview state
+  const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
+  const [pdfPreviewData, setPdfPreviewData] = useState<QuotePreviewData | null>(null);
+
+  // Edit modal state
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingQuote, setEditingQuote] = useState<Quote | null>(null);
+  const [editForm, setEditForm] = useState<{
+    labor_hours: number;
+    notes: string;
+  }>({ labor_hours: 0, notes: "" });
+  const [saving, setSaving] = useState(false);
+
+  // Validation actions state
+  const [validating, setValidating] = useState(false);
+  const [refusing, setRefusing] = useState(false);
 
   const fetchQuotes = useCallback(async () => {
     setLoading(true);
@@ -106,6 +132,57 @@ export default function DevisPage() {
   useEffect(() => {
     fetchQuotes();
   }, [fetchQuotes]);
+
+  // Handle URL parameters for notifications and direct actions
+  useEffect(() => {
+    const success = searchParams.get("success");
+    const error = searchParams.get("error");
+    const message = searchParams.get("message");
+    const quoteId = searchParams.get("quote");
+    const action = searchParams.get("action");
+
+    if (success === "quote_sent") {
+      toast.addToast("Devis validé et envoyé au client", "success");
+    } else if (success === "quote_refused") {
+      toast.addToast("Devis refusé", "info");
+    }
+
+    if (error === "missing_id") {
+      toast.addToast("ID du devis manquant", "error");
+    } else if (error === "quote_not_found") {
+      toast.addToast("Devis introuvable", "error");
+    } else if (error === "no_client_email") {
+      toast.addToast("Le client n'a pas d'adresse email", "error");
+    } else if (error === "email_failed") {
+      toast.addToast("Erreur lors de l'envoi de l'email", "error");
+    } else if (error === "internal_error") {
+      toast.addToast("Erreur interne", "error");
+    }
+
+    if (message === "already_processed") {
+      toast.addToast("Ce devis a déjà été traité", "info");
+    }
+
+    // Clear URL parameters after processing
+    if (success || error || message) {
+      router.replace("/dashboard/devis", { scroll: false });
+    }
+
+    // Open specific quote if requested
+    if (quoteId && quotes.length > 0) {
+      const quote = quotes.find((q) => q.id === quoteId);
+      if (quote) {
+        if (action === "edit") {
+          openEditModal(quote);
+        } else if (action === "view") {
+          openPdfPreview(quote);
+        } else {
+          openQuoteDetail(quote);
+        }
+        router.replace("/dashboard/devis", { scroll: false });
+      }
+    }
+  }, [searchParams, quotes, toast, router]);
 
   const filteredQuotes = useMemo(() => {
     let result = quotes;
@@ -134,6 +211,7 @@ export default function DevisPage() {
   const stats = useMemo(() => {
     const total = quotes.length;
     const draft = quotes.filter((q) => q.status === "draft").length;
+    const pendingValidation = quotes.filter((q) => q.status === "pending_validation").length;
     const sent = quotes.filter((q) => q.status === "sent").length;
     const accepted = quotes.filter((q) => q.status === "accepted").length;
     const refused = quotes.filter((q) => q.status === "refused").length;
@@ -141,12 +219,130 @@ export default function DevisPage() {
       .filter((q) => q.status === "accepted")
       .reduce((sum, q) => sum + (q.total || 0), 0);
 
-    return { total, draft, sent, accepted, refused, totalAmount };
+    return { total, draft, pendingValidation, sent, accepted, refused, totalAmount };
   }, [quotes]);
 
   const openQuoteDetail = (quote: Quote) => {
     setSelectedQuote(quote);
     setModalOpen(true);
+  };
+
+  // Open PDF preview
+  const openPdfPreview = (quote: Quote) => {
+    const clientName = quote.clients?.first_name || quote.clients?.last_name
+      ? `${quote.clients.first_name || ""} ${quote.clients.last_name || ""}`.trim()
+      : "Client";
+
+    const items = (quote.quote_items || []).map((item) => ({
+      kind: item.kind || "part",
+      label: item.label || item.description || "Article",
+      description: item.description,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      line_total: item.line_total,
+    }));
+
+    setPdfPreviewData({
+      quoteNumber: quote.quote_number,
+      clientName,
+      clientEmail: quote.clients?.email,
+      clientPhone: quote.clients?.phone,
+      items,
+      laborTotal: quote.labor_total || 0,
+      partsTotal: quote.parts_total || 0,
+      taxRate: quote.tax_rate || 21,
+      taxAmount: quote.tax_amount || 0,
+      total: quote.total,
+    });
+    setPdfPreviewOpen(true);
+  };
+
+  // Open edit modal
+  const openEditModal = (quote: Quote) => {
+    setEditingQuote(quote);
+    setEditForm({
+      labor_hours: quote.labor_hours || 0,
+      notes: quote.notes || "",
+    });
+    setEditModalOpen(true);
+  };
+
+  // Save edited quote
+  const handleSaveEdit = async () => {
+    if (!editingQuote) return;
+    setSaving(true);
+    try {
+      const supabase = getSupabaseBrowserClient();
+
+      // Update quote
+      const { error } = await supabase
+        .from("quotes")
+        .update({
+          labor_hours: editForm.labor_hours,
+          notes: editForm.notes,
+        })
+        .eq("id", editingQuote.id);
+
+      if (error) throw error;
+
+      toast.addToast("Devis mis à jour", "success");
+      setEditModalOpen(false);
+      setEditingQuote(null);
+      fetchQuotes();
+    } catch (err) {
+      console.error("[Devis] save edit failed", err);
+      toast.addToast("Erreur lors de la sauvegarde", "error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Validate quote (send to client)
+  const handleValidateQuote = async (quote: Quote) => {
+    setValidating(true);
+    try {
+      const response = await apiFetch("/api/admin/quotes/validate", {
+        method: "POST",
+        body: JSON.stringify({ quote_id: quote.id }),
+      }) as { success?: boolean; sent_to?: string; error?: string };
+
+      if (response.success) {
+        toast.addToast(`Devis envoyé à ${response.sent_to}`, "success");
+        setModalOpen(false);
+        fetchQuotes();
+      } else {
+        throw new Error(response.error || "Erreur validation");
+      }
+    } catch (err) {
+      console.error("[Devis] validate failed", err);
+      toast.addToast("Erreur lors de la validation", "error");
+    } finally {
+      setValidating(false);
+    }
+  };
+
+  // Refuse quote
+  const handleRefuseQuote = async (quote: Quote) => {
+    setRefusing(true);
+    try {
+      const response = await apiFetch("/api/admin/quotes/refuse", {
+        method: "POST",
+        body: JSON.stringify({ quote_id: quote.id }),
+      }) as { success?: boolean; error?: string };
+
+      if (response.success) {
+        toast.addToast("Devis refusé", "success");
+        setModalOpen(false);
+        fetchQuotes();
+      } else {
+        throw new Error(response.error || "Erreur refus");
+      }
+    } catch (err) {
+      console.error("[Devis] refuse failed", err);
+      toast.addToast("Erreur lors du refus", "error");
+    } finally {
+      setRefusing(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -297,13 +493,20 @@ export default function DevisPage() {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
             <Card
               className={`cursor-pointer transition ${filterStatus === "all" ? "ring-2 ring-airPrimary" : ""}`}
               onClick={() => setFilterStatus("all")}
             >
               <p className="text-xs text-airMuted uppercase">Total</p>
               <p className="text-2xl font-bold text-airDark">{stats.total}</p>
+            </Card>
+            <Card
+              className={`cursor-pointer transition ${filterStatus === "pending_validation" ? "ring-2 ring-amber-400" : ""}`}
+              onClick={() => setFilterStatus("pending_validation")}
+            >
+              <p className="text-xs text-airMuted uppercase">À valider</p>
+              <p className="text-2xl font-bold text-amber-600">{stats.pendingValidation}</p>
             </Card>
             <Card
               className={`cursor-pointer transition ${filterStatus === "draft" ? "ring-2 ring-gray-400" : ""}`}
@@ -436,7 +639,28 @@ export default function DevisPage() {
                   <span className="ml-2">{getStatusConfig(selectedQuote.status).label}</span>
                 </Badge>
                 <div className="flex items-center gap-2">
-                  {(selectedQuote.status === "sent" || selectedQuote.status === "draft") && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    icon={<Eye className="w-4 h-4" />}
+                    onClick={() => openPdfPreview(selectedQuote)}
+                  >
+                    Voir PDF
+                  </Button>
+                  {(selectedQuote.status === "draft" || selectedQuote.status === "pending_validation") && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      icon={<Edit3 className="w-4 h-4" />}
+                      onClick={() => {
+                        setModalOpen(false);
+                        openEditModal(selectedQuote);
+                      }}
+                    >
+                      Modifier
+                    </Button>
+                  )}
+                  {selectedQuote.status === "sent" && (
                     <Button
                       variant="secondary"
                       size="sm"
@@ -444,7 +668,7 @@ export default function DevisPage() {
                       onClick={handleResendEmail}
                       disabled={resending}
                     >
-                      {selectedQuote.status === "draft" ? "Envoyer" : "Renvoyer"}
+                      Renvoyer
                     </Button>
                   )}
                   <Button
@@ -459,10 +683,38 @@ export default function DevisPage() {
                 </div>
               </div>
 
-              {/* Manual status change buttons */}
-              {selectedQuote.status !== "accepted" && selectedQuote.status !== "refused" && (
-                <div className="flex items-center gap-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
-                  <span className="text-sm text-amber-800 flex-1">Changer le statut manuellement :</span>
+              {/* Validation actions for pending_validation quotes */}
+              {selectedQuote.status === "pending_validation" && (
+                <div className="flex items-center gap-2 p-4 bg-amber-50 rounded-xl border-2 border-amber-300">
+                  <AlertCircle className="w-5 h-5 text-amber-600" />
+                  <span className="text-sm text-amber-800 flex-1 font-medium">Ce devis attend votre validation avant envoi au client</span>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    icon={validating ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                    onClick={() => handleValidateQuote(selectedQuote)}
+                    disabled={validating || refusing}
+                    className="!bg-green-500 !text-white hover:!bg-green-600"
+                  >
+                    Valider et Envoyer
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    icon={refusing ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
+                    onClick={() => handleRefuseQuote(selectedQuote)}
+                    disabled={validating || refusing}
+                    className="!bg-red-500 !text-white hover:!bg-red-600"
+                  >
+                    Refuser
+                  </Button>
+                </div>
+              )}
+
+              {/* Manual status change buttons for sent quotes */}
+              {selectedQuote.status === "sent" && (
+                <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <span className="text-sm text-blue-800 flex-1">Marquer manuellement comme :</span>
                   <Button
                     variant="secondary"
                     size="sm"
@@ -471,7 +723,7 @@ export default function DevisPage() {
                     disabled={updatingStatus}
                     className="!bg-green-500 !text-white hover:!bg-green-600"
                   >
-                    Accepter
+                    Accepté
                   </Button>
                   <Button
                     variant="secondary"
@@ -481,7 +733,7 @@ export default function DevisPage() {
                     disabled={updatingStatus}
                     className="!bg-red-500 !text-white hover:!bg-red-600"
                   >
-                    Refuser
+                    Refusé
                   </Button>
                 </div>
               )}
@@ -629,6 +881,131 @@ export default function DevisPage() {
             </Button>
           </div>
         </div>
+      </Modal>
+
+      {/* PDF Preview Modal */}
+      {pdfPreviewData && (
+        <QuotePreviewModal
+          open={pdfPreviewOpen}
+          onClose={() => {
+            setPdfPreviewOpen(false);
+            setPdfPreviewData(null);
+          }}
+          data={pdfPreviewData}
+          clientEmail={pdfPreviewData.clientEmail}
+          onSendEmail={async () => {
+            // If quote is pending_validation, validate and send
+            if (selectedQuote?.status === "pending_validation") {
+              await handleValidateQuote(selectedQuote);
+            }
+            setPdfPreviewOpen(false);
+          }}
+          isSending={validating}
+        />
+      )}
+
+      {/* Edit Quote Modal */}
+      <Modal
+        isOpen={editModalOpen}
+        onClose={() => {
+          setEditModalOpen(false);
+          setEditingQuote(null);
+        }}
+        title={`Modifier le devis ${editingQuote?.quote_number || ""}`}
+        size="lg"
+      >
+        {editingQuote && (
+          <div className="space-y-6">
+            {/* Client Info (read-only) */}
+            <div className="bg-airSurface rounded-xl p-4">
+              <h3 className="font-semibold text-airDark mb-2 text-sm">Client</h3>
+              <p className="text-airDark">
+                {editingQuote.clients?.first_name || editingQuote.clients?.last_name
+                  ? `${editingQuote.clients.first_name || ""} ${editingQuote.clients.last_name || ""}`.trim()
+                  : "Client inconnu"}
+              </p>
+              {editingQuote.clients?.email && (
+                <p className="text-sm text-airMuted">{editingQuote.clients.email}</p>
+              )}
+            </div>
+
+            {/* Editable fields */}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-airDark mb-1">
+                  Heures de main d'œuvre
+                </label>
+                <Input
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  value={editForm.labor_hours}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, labor_hours: parseFloat(e.target.value) || 0 })
+                  }
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-airDark mb-1">
+                  Notes
+                </label>
+                <textarea
+                  className="w-full px-3 py-2 border border-airBorder rounded-lg focus:outline-none focus:ring-2 focus:ring-airPrimary/50"
+                  rows={4}
+                  value={editForm.notes}
+                  onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                  placeholder="Notes pour le client..."
+                />
+              </div>
+            </div>
+
+            {/* Current total display */}
+            <div className="bg-gradient-to-r from-orange-50 to-blue-50 rounded-xl p-4 border-2 border-orange-300">
+              <div className="flex justify-between items-center">
+                <span className="font-semibold text-airDark">Total actuel</span>
+                <span className="text-2xl font-bold text-orange-500">
+                  {editingQuote.total?.toFixed(2)}€
+                </span>
+              </div>
+              <p className="text-xs text-airMuted mt-1">
+                Le total sera recalculé automatiquement si vous modifiez les heures
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-between gap-3">
+              <Button
+                variant="secondary"
+                icon={<Eye className="w-4 h-4" />}
+                onClick={() => {
+                  setEditModalOpen(false);
+                  openPdfPreview(editingQuote);
+                }}
+              >
+                Aperçu PDF
+              </Button>
+              <div className="flex gap-3">
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setEditModalOpen(false);
+                    setEditingQuote(null);
+                  }}
+                >
+                  Annuler
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={handleSaveEdit}
+                  loading={saving}
+                >
+                  Sauvegarder
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </Modal>
 
     </>

@@ -628,7 +628,7 @@ export default function TechReportPage() {
             {success && (
               <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl text-sm flex items-center gap-2">
                 <Check className="w-5 h-5" />
-                Rapport envoyé avec succès ! Redirection...
+                Rapport créé ! En attente de validation par l'administrateur. Redirection...
               </div>
             )}
           </div>

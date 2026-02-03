@@ -3,7 +3,7 @@ import { z } from "zod";
 import { getSupabaseAdmin } from "@/lib/supabaseServer";
 import { jsonOk, jsonError } from "@/lib/apiResponse";
 import { requireTech } from "@/lib/techAuth";
-import { resend, FROM_EMAIL, generateQuoteEmailHtml, defaultBrand } from "@/lib/resend";
+import { resend, FROM_EMAIL, ADMIN_EMAIL, generateAdminQuoteNotificationHtml, defaultBrand } from "@/lib/resend";
 
 const ReportItemSchema = z.object({
   inventory_item_id: z.string().uuid(),
@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
       .insert({
         client_id: data.client_id,
         quote_number: quoteNumber,
-        status: "sent",
+        status: "pending_validation",
         labor_total: laborTotal,
         parts_total: partsTotal,
         tax_rate: TAX_RATE,
@@ -176,7 +176,6 @@ export async function POST(request: NextRequest) {
         internal_notes: `Rapport technicien - ${data.estimated_hours}h`,
         labor_hours: data.estimated_hours,
         labor_type: "intervention",
-        sent_at: new Date().toISOString(),
       })
       .select()
       .single();
@@ -265,13 +264,13 @@ export async function POST(request: NextRequest) {
       .update({ plan_image_url: planUrl })
       .eq("id", data.client_id);
 
-    // 12. Send quote email to client
+    // 12. Send notification email to admin for validation
     const clientName =
       [client.first_name, client.last_name].filter(Boolean).join(" ") || "Client";
 
     const emailItems = [
       {
-        description: `Main d'oeuvre (${data.estimated_hours}h)`,
+        description: `Main d'œuvre (${data.estimated_hours}h)`,
         quantity: 1,
         unitPrice: laborTotal,
         total: laborTotal,
@@ -284,39 +283,41 @@ export async function POST(request: NextRequest) {
       })),
     ];
 
-    const validUntil = new Date(expiresAt).toLocaleDateString("fr-BE", {
-      day: "2-digit",
-      month: "long",
-      year: "numeric",
-    });
+    const clientAddress = [client.address_line1, client.city].filter(Boolean).join(", ");
 
-    const html = generateQuoteEmailHtml({
-      clientName,
-      clientEmail: client.email,
+    const adminHtml = generateAdminQuoteNotificationHtml({
       quoteNumber,
       quoteId: quote.id,
+      clientName,
+      clientEmail: client.email,
+      clientPhone: client.phone,
+      clientAddress: clientAddress || undefined,
+      estimatedHours: data.estimated_hours,
       items: emailItems,
+      laborTotal,
+      partsTotal,
+      taxAmount,
       totalAmount: total,
-      validUntil,
+      notes: data.notes,
       brand: defaultBrand,
     });
 
     try {
       await resend.emails.send({
         from: FROM_EMAIL,
-        to: client.email,
-        subject: `Devis Aircooling - ${quoteNumber}`,
-        html,
+        to: ADMIN_EMAIL,
+        subject: `🔔 Nouveau devis à valider - ${quoteNumber} - ${clientName}`,
+        html: adminHtml,
       });
-      console.info(`[tech/reports] Quote email sent to ${client.email}`);
+      console.info(`[tech/reports] Admin notification sent to ${ADMIN_EMAIL}`);
     } catch (emailError) {
-      console.error("[tech/reports] Email send error:", emailError);
+      console.error("[tech/reports] Admin email send error:", emailError);
     }
 
-    // 13. Update quote status to quote_sent in tech_report
+    // 13. Update tech_report status to pending_validation
     await supabase
       .from("tech_reports")
-      .update({ status: "quote_sent" })
+      .update({ status: "pending_validation" })
       .eq("id", report.id);
 
     console.info(
@@ -329,7 +330,8 @@ export async function POST(request: NextRequest) {
       quote_id: quote.id,
       quote_number: quoteNumber,
       total,
-      email_sent_to: client.email,
+      status: "pending_validation",
+      admin_notified: true,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
